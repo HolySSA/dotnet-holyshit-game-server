@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Core.Client.Interfaces;
 using Core.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Server.Configuration;
 
@@ -11,18 +12,18 @@ public static class ServiceCollectionExtensions
   /// 설정 서비스 등록
   /// </summary>
   public static IServiceCollection AddServerConfiguration(
-    this IServiceCollection services, 
+    this IServiceCollection services,
     IConfiguration configuration)
   {
     services.AddSingleton<IConfiguration>(configuration);
-    
+
     // 로깅 설정
     services.AddLogging(builder =>
     {
       builder.AddConsole();
       builder.AddDebug();
     });
-      
+
     return services;
   }
 

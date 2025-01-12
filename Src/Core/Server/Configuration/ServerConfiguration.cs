@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Core.Server.Configuration;
 
@@ -29,13 +28,13 @@ public static class ServerConfiguration
 
   private static string GetSettingsFile(string[] args)
   {
-      // --settings 인자 찾기
+    // --settings 인자 찾기
     for (int i = 0; i < args.Length - 1; i++)
     {
       if (args[i] == "--settings")
         return args[i + 1];
     }
-    
+
     // 기본값 반환
     return "appsettings.json";
   }
