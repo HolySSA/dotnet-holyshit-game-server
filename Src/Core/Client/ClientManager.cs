@@ -41,7 +41,7 @@ public class ClientManager : IClientManager
       {
         if (session.UserId > 0)
           _userSessions.Remove(session.UserId);
-        _logger.LogInformation($"세션 제거: UserId={session.UserId}, SessionId={session.SessionId}");
+        _logger.LogInformation("세션 제거: UserId={UserId}, SessionId={SessionId}", session.UserId, session.SessionId);
       }
     }
   }
@@ -54,9 +54,9 @@ public class ClientManager : IClientManager
     lock (_lock)
     {
       if (_userSessions.TryAdd(userId, session))
-        _logger.LogInformation($"유저 세션 등록: UserId={userId}, SessionId={session.SessionId}");
+        _logger.LogInformation("유저 세션 등록: UserId={UserId}, SessionId={SessionId}", userId, session.SessionId);
       else
-        _logger.LogWarning($"유저 세션 등록 실패 (중복): UserId={userId}");
+        _logger.LogWarning("유저 세션 등록 실패 (중복): UserId={UserId}", userId);
     }
   }
 
