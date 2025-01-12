@@ -29,6 +29,7 @@ public class ClientSession : IDisposable
     _sessionCts = new CancellationTokenSource();
 
     SessionId = Guid.NewGuid().ToString();
+    _clientManager.AddSession(this); // 클라이언트 세션 추가
   }
 
   /// <summary>
@@ -38,6 +39,7 @@ public class ClientSession : IDisposable
   {
     try
     {
+      _logger.LogInformation("새로운 클라이언트 연결: {SessionId}", SessionId);
       using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _sessionCts.Token);
       await ProcessMessagesAsync(linkedCts.Token);
     }
@@ -63,26 +65,44 @@ public class ClientSession : IDisposable
     var buffer = new byte[4096];
     var messageBuffer = new List<byte>();
 
-    while (!cancellationToken.IsCancellationRequested && !_disposed)
+    try
     {
-      try
+      while (!cancellationToken.IsCancellationRequested && !_disposed)
       {
-        int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-
-        if (bytesRead == 0)
+        // 연결이 끊어졌는지 확인
+        if (!IsConnected())
         {
-          _logger.LogInformation("클라이언트 연결 종료: {SessionId}", SessionId);
+          _logger.LogInformation("클라이언트 연결이 끊어졌습니다: {SessionId}", SessionId);
           break;
         }
+        
+        await Task.Delay(1000, cancellationToken); // CPU 사용률을 줄이기 위한 딜레이
+      }
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+      _logger.LogError(ex, "메시지 처리 중 오류 발생: {SessionId}", SessionId);
+    }
+  }
 
-        messageBuffer.AddRange(buffer.Take(bytesRead));
-        await ProcessPacketAsync(messageBuffer);
-      }
-      catch (Exception ex) when (ex is not OperationCanceledException)
+  private bool IsConnected()
+  {
+    try
+    {
+      if (_client.Client.Poll(0, SelectMode.SelectRead))
       {
-        _logger.LogError(ex, "메시지 처리 중 오류 발생: {SessionId}", SessionId);
-        break;
+        byte[] buff = new byte[1];
+        if (_client.Client.Receive(buff, SocketFlags.Peek) == 0)
+        {
+          // 클라이언트가 정상적으로 연결을 종료
+          return false;
+        }
       }
+      return true;
+    }
+    catch
+    {
+      return false;
     }
   }
 
