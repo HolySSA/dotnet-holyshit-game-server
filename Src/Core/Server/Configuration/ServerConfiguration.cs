@@ -1,3 +1,5 @@
+using Core.Client.Interfaces;
+using Core.Protocol;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +25,18 @@ public static class ServerConfiguration
       .AddNetworkServices()
       .AddGameServices();
 
-    return services.BuildServiceProvider();
+    var serviceProvider = services.BuildServiceProvider();
+    InitializeServices(serviceProvider);
+    return serviceProvider;
+  }
+
+  private static void InitializeServices(IServiceProvider serviceProvider)
+  {
+    // 서비스들을 생성하여 초기화 트리거
+    serviceProvider.GetRequiredService<IPacketManager>();
+    serviceProvider.GetRequiredService<IHandlerManager>();
+    serviceProvider.GetRequiredService<IClientManager>();
+    serviceProvider.GetRequiredService<ServerManager>();
   }
 
   private static string GetSettingsFile(string[] args)
@@ -37,10 +50,5 @@ public static class ServerConfiguration
 
     // 기본값 반환
     return "appsettings.json";
-  }
-
-  public static async Task InitializeServicesAsync(IServiceProvider serviceProvider)
-  {
-    // 초기화 로직
   }
 }

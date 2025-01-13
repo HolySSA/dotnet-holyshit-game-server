@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using Core.Client.Interfaces;
+using Core.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -7,29 +8,40 @@ namespace Core.Client;
 
 public class ClientSession : IDisposable
 {
-  private readonly TcpClient _client; // 클라이언트
-  private readonly NetworkStream _stream; // 스트림
-  private readonly IServiceProvider _serviceProvider; // DI 컨테이너
-  private readonly ILogger<ClientSession> _logger;
-  private readonly IClientManager _clientManager;
-  private readonly CancellationTokenSource _sessionCts;
+  private readonly IClientConnection _clientConnection; // 클라이언트 연결
+  private readonly IClientManager _clientManager; // 클라이언트 매니저
+  private readonly MessageQueue _messageQueue; // 메시지 큐
+  private readonly PacketSerializer _packetSerializer; // 패킷 직렬화
+  private readonly ILogger<ClientSession> _logger; // 로거
   private bool _disposed; // 객체 해제 여부
 
-  public string SessionId { get; }
+  public string SessionId { get; } // 세션 ID
   public int UserId { get; private set; } // 유저 ID
-  public IServiceProvider ServiceProvider => _serviceProvider;
+  public IServiceScope? ServiceScope { get; set; } // 현재 요청 서비스 스코프
+  public IServiceProvider ServiceProvider { get; } // DI 컨테이너
+  public MessageQueue MessageQueue => _messageQueue; // 메시지 큐 접근자
 
   public ClientSession(TcpClient client, IServiceProvider serviceProvider)
   {
-    _client = client;
-    _stream = client.GetStream();
-    _serviceProvider = serviceProvider;
-    _logger = serviceProvider.GetRequiredService<ILogger<ClientSession>>();
-    _clientManager = serviceProvider.GetRequiredService<IClientManager>();
-    _sessionCts = new CancellationTokenSource();
-
     SessionId = Guid.NewGuid().ToString();
-    _clientManager.AddSession(this); // 클라이언트 세션 추가
+    ServiceProvider = serviceProvider;
+
+    // 의존성 주입
+    _clientManager = serviceProvider.GetRequiredService<IClientManager>();
+    _messageQueue = serviceProvider.GetRequiredService<MessageQueue>();
+    _packetSerializer = serviceProvider.GetRequiredService<PacketSerializer>();
+    _logger = serviceProvider.GetRequiredService<ILogger<ClientSession>>();
+
+    // 네트워크 연결 초기화
+    _clientConnection = new TcpClientConnection(
+      client.GetStream(),
+      serviceProvider.GetRequiredService<ILogger<TcpClientConnection>>());
+
+    _clientConnection.OnDataReceived += HandleDataReceived;
+    _clientConnection.OnDisconnected += HandleDisconnected;
+
+    // 클라이언트 세션 추가
+    _clientManager.AddSession(this);
   }
 
   /// <summary>
@@ -40,12 +52,7 @@ public class ClientSession : IDisposable
     try
     {
       _logger.LogInformation("새로운 클라이언트 연결: {SessionId}", SessionId);
-      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _sessionCts.Token);
-      await ProcessMessagesAsync(linkedCts.Token);
-    }
-    catch (OperationCanceledException)
-    {
-      _logger.LogInformation("세션이 정상적으로 종료되었습니다: {SessionId}", SessionId);
+      await _clientConnection.StartAsync(cancellationToken);
     }
     catch (Exception ex)
     {
@@ -58,94 +65,44 @@ public class ClientSession : IDisposable
   }
 
   /// <summary>
-  /// 메시지 처리
+  /// 데이터 수신 처리
   /// </summary>
-  private async Task ProcessMessagesAsync(CancellationToken cancellationToken)
-  {
-    var buffer = new byte[4096];
-    var messageBuffer = new List<byte>();
-
-    try
-    {
-      while (!cancellationToken.IsCancellationRequested && !_disposed)
-      {
-        // 연결이 끊어졌는지 확인
-        if (!IsConnected())
-        {
-          _logger.LogInformation("클라이언트 연결이 끊어졌습니다: {SessionId}", SessionId);
-          break;
-        }
-        
-        await Task.Delay(1000, cancellationToken); // CPU 사용률을 줄이기 위한 딜레이
-      }
-    }
-    catch (Exception ex) when (ex is not OperationCanceledException)
-    {
-      _logger.LogError(ex, "메시지 처리 중 오류 발생: {SessionId}", SessionId);
-    }
-  }
-
-  private bool IsConnected()
+  private async void HandleDataReceived(byte[] data)
   {
     try
     {
-      if (_client.Client.Poll(0, SelectMode.SelectRead))
+      var result = _packetSerializer.Deserialize(data);
+      if (result.HasValue)
       {
-        byte[] buff = new byte[1];
-        if (_client.Client.Receive(buff, SocketFlags.Peek) == 0)
-        {
-          // 클라이언트가 정상적으로 연결을 종료
-          return false;
-        }
+        var (packetId, sequence, message) = result.Value;
+        if (message != null)
+          await _messageQueue.EnqueueReceive(packetId, sequence, message);
       }
-      return true;
     }
-    catch
+    catch (Exception ex)
     {
-      return false;
+      _logger.LogError(ex, "패킷 처리 중 오류 발생: {SessionId}", SessionId);
     }
   }
 
   /// <summary>
-  /// 패킷 수신 (역직렬화)
+  /// 연결 종료 처리
   /// </summary>
-  /// <param name="messageBuffer"></param>
-  /// <returns></returns>
-  private async Task ProcessPacketAsync(List<byte> messageBuffer)
+  private void HandleDisconnected()
   {
-    // 여기에 패킷 처리 로직 구현
-    // 예: 패킷 헤더 확인, 패킷 역직렬화, 게임 로직 처리 등
+    _logger.LogInformation("클라이언트 연결 종료: {SessionId}", SessionId);
+    Dispose();
   }
 
   /// <summary>
   /// 패킷 전송
   /// </summary>
-  public async Task SendAsync<T>(T packet) where T : class
+  public async Task SendAsync(byte[] data)
   {
     if (_disposed)
       throw new ObjectDisposedException(nameof(ClientSession));
 
-    try
-    {
-      // 여기에 패킷 직렬화 및 전송 로직 구현
-      byte[] data = SerializePacket(packet);
-      await _stream.WriteAsync(data);
-      await _stream.FlushAsync();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "패킷 전송 중 오류 발생: {SessionId}", SessionId);
-      throw;
-    }
-  }
-
-  /// <summary>
-  /// 패킷 송신 (직렬화)
-  /// </summary>
-  private byte[] SerializePacket<T>(T packet) where T : class
-  {
-    // 여기에 패킷 직렬화 로직 구현
-    throw new NotImplementedException();
+    await _clientConnection.SendAsync(data);
   }
 
   /// <summary>
@@ -163,17 +120,14 @@ public class ClientSession : IDisposable
   public void Dispose()
   {
     if (_disposed) return;
+    _disposed = true;
 
     try
     {
-      _sessionCts.Cancel();
       _clientManager.RemoveSession(this);
+      _clientConnection.Dispose();
+      ServiceScope?.Dispose();
 
-      _stream?.Dispose();
-      _client?.Dispose();
-      _sessionCts.Dispose();
-
-      _disposed = true;
       _logger.LogInformation("세션 종료: {SessionId}", SessionId);
     }
     catch (Exception ex)
