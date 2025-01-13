@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option csharp_namespace = "Core.Protocol.Packets";
+
+import "Common.proto";
+
+// 게임 서버 초기화 요청
+message C2SGameServerInitRequest {
+  int32 userId = 1;
+  string token = 2;
+  RoomData roomData = 3;
+}
+
+// 게임 서버 초기화 응답
+message S2CGameServerInitResponse {
+  bool success = 1;
+  GlobalFailCode failCode = 2;
+}
+
+// 게임 시작 알림
+message S2CGameServerInitNotification {
+  repeated CharacterPositionData characterPositions = 1;  // 모든 플레이어의 초기 위치
+}
+
+message C2SPositionUpdateRequest {
+  double x = 1;
+  double y = 2;
+}
+
+message S2CPositionUpdateResponse {
+  bool success = 1;
+  GlobalFailCode failCode = 2;
+}
+
+message S2CPositionUpdateNotification {
+  repeated CharacterPositionData characterPositions = 1;
+}

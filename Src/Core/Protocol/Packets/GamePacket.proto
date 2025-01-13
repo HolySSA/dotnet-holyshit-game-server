@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option csharp_namespace = "Core.Protocol.Packets";
+
+import "Game.proto";
+
+message GamePacket {
+  oneof payload {
+    C2SGameServerInitRequest gameServerInitRequest = 1;
+    S2CGameServerInitResponse gameServerInitResponse = 2;
+    S2CGameServerInitNotification GameServerInitNotification = 3;
+    C2SPositionUpdateRequest positionUpdateRequest = 4;
+    S2CPositionUpdateResponse positionUpdateResponse = 5;
+    S2CPositionUpdateNotification positionUpdateNotification = 6;
+  }
+}
+
+enum PacketId {
+  Unknown = 0;
+
+  // Game packets (28~)
+  GameServerInitRequest = 28;
+  GameServerInitResponse = 29;
+  GameServerInitNotification = 30;
+  PositionUpdateRequest = 31;
+  PositionUpdateResponse = 32;
+  PositionUpdateNotification = 33;
+
+}
