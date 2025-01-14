@@ -17,6 +17,7 @@ public class ClientSession : IDisposable
 
   public string SessionId { get; } // 세션 ID
   public int UserId { get; private set; } // 유저 ID
+  public int RoomId { get; private set; } // 방 ID
   public IServiceScope? ServiceScope { get; set; } // 현재 요청 서비스 스코프
   public IServiceProvider ServiceProvider { get; } // DI 컨테이너
   public MessageQueue MessageQueue => _messageQueue; // 메시지 큐 접근자
@@ -28,9 +29,11 @@ public class ClientSession : IDisposable
 
     // 의존성 주입
     _clientManager = serviceProvider.GetRequiredService<IClientManager>();
-    _messageQueue = serviceProvider.GetRequiredService<MessageQueue>();
     _packetSerializer = serviceProvider.GetRequiredService<PacketSerializer>();
+    _messageQueue = serviceProvider.GetRequiredService<MessageQueue>();
     _logger = serviceProvider.GetRequiredService<ILogger<ClientSession>>();
+
+    _messageQueue.SetSession(this);
 
     // 네트워크 연결 초기화
     _clientConnection = new TcpClientConnection(
@@ -71,12 +74,20 @@ public class ClientSession : IDisposable
   {
     try
     {
+      _logger.LogInformation("패킷 수신: SessionId={SessionId}, DataLength={Length}", SessionId, data.Length);
       var result = _packetSerializer.Deserialize(data);
       if (result.HasValue)
       {
         var (packetId, sequence, message) = result.Value;
+        _logger.LogInformation("패킷 역직렬화 성공: SessionId={SessionId}, PacketId={PacketId}, Sequence={Sequence}",
+                SessionId, packetId, sequence);
+
         if (message != null)
           await _messageQueue.EnqueueReceive(packetId, sequence, message);
+      }
+      else
+      {
+        _logger.LogWarning("패킷 역직렬화 실패: SessionId={SessionId}", SessionId);  // 역직렬화 실패 로그 추가
       }
     }
     catch (Exception ex)
@@ -112,6 +123,14 @@ public class ClientSession : IDisposable
   {
     UserId = userId;
     _clientManager.RegisterUserSession(userId, this);
+  }
+
+  /// <summary>
+  /// 방 ID 설정
+  /// </summary>
+  public void SetRoomId(int roomId)
+  {
+    RoomId = roomId;
   }
 
   /// <summary>

@@ -15,17 +15,24 @@ public class MessageQueue
   private volatile bool _processingReceive;
   private volatile bool _processingSend;
 
-  private readonly ClientSession _session;
+  private ClientSession? _session;
   private readonly IPacketManager _packetManager;
   private readonly PacketSerializer _packetSerializer;
   private readonly ILogger<MessageQueue> _logger;
 
-  public MessageQueue(ClientSession session, IPacketManager packetManager, PacketSerializer packetSerializer, ILogger<MessageQueue> logger)
+  public MessageQueue(IPacketManager packetManager, PacketSerializer packetSerializer, ILogger<MessageQueue> logger)
   {
-    _session = session;
     _packetManager = packetManager;
     _packetSerializer = packetSerializer;
     _logger = logger;
+  }
+
+  /// <summary>
+  /// 세션 설정
+  /// </summary>
+  public void SetSession(ClientSession session)
+  {
+    _session = session;
   }
 
   /// <summary>
@@ -33,6 +40,8 @@ public class MessageQueue
   /// </summary>
   public async Task EnqueueReceive(PacketId packetId, uint sequence, IMessage message)
   {
+    _logger.LogInformation("메시지 큐에 추가: PacketId={PacketId}, Sequence={Sequence}", packetId, sequence);
+
     _receiveQueue.Enqueue(new GamePacketMessage(packetId, sequence, message));
     await ProcessReceiveQueue();
   }

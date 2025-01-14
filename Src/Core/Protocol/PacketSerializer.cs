@@ -1,6 +1,7 @@
 using System.Text;
 using Google.Protobuf;
 using Core.Protocol.Packets;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Protocol;
 
@@ -10,10 +11,12 @@ public class PacketSerializer
   private static readonly string VERSION = "1.0.0"; // 버전 정보
 
   private readonly IPacketManager _packetManager;
+  private readonly ILogger<PacketSerializer> _logger;
 
-  public PacketSerializer(IPacketManager packetManager)
+  public PacketSerializer(IPacketManager packetManager, ILogger<PacketSerializer> logger)
   {
     _packetManager = packetManager;
+    _logger = logger;
   }
 
   /// <summary>
@@ -62,36 +65,67 @@ public class PacketSerializer
   {
     try
     {
-      if (buffer.Length < HEADER_SIZE) return null;
+      if (buffer.Length < HEADER_SIZE)
+      {
+        _logger.LogWarning("버퍼 크기가 헤더보다 작음: {Length} < {HeaderSize}", buffer.Length, HEADER_SIZE);
+        return null;
+      }
 
       var offset = 0;
 
       // 패킷 타입 (2 bytes)
       var packetId = (PacketId)ReadUInt16(buffer, ref offset);
+      _logger.LogInformation("패킷 타입: {PacketId}", packetId);
 
       // 버전 길이 (1 byte) + 버전 문자열
       var versionLength = buffer[offset++];
-      if (offset + versionLength > buffer.Length) return null;
+      _logger.LogInformation("버전 길이: {VersionLength}", versionLength);
+      if (offset + versionLength > buffer.Length)
+      {
+        _logger.LogWarning("버전 문자열이 버퍼를 초과함: {Offset} + {VersionLength} > {BufferLength}", offset, versionLength, buffer.Length);
+        return null;
+      }
+      var version = Encoding.UTF8.GetString(buffer, offset, versionLength);
+      _logger.LogInformation("버전: {Version}", version);
+
+      if (version != VERSION)
+      {
+        _logger.LogWarning("버전 불일치: 기대={ExpectedVersion}, 실제={ActualVersion}", VERSION, version);
+        return null;
+      }
       offset += versionLength;
 
       // 시퀀스 (4 bytes)
       var sequence = ReadUInt32(buffer, ref offset);
+      _logger.LogInformation("시퀀스: {Sequence}", sequence);
 
       // 페이로드 길이 (4 bytes)
       var payloadLength = ReadInt32(buffer, ref offset);
-      if (payloadLength <= 0 || payloadLength > 1024 * 1024) return null;
+      _logger.LogInformation("페이로드 길이: {PayloadLength}", payloadLength);
+      if (payloadLength <= 0 || payloadLength > 1024 * 1024)
+      {
+        _logger.LogWarning("잘못된 페이로드 길이: {PayloadLength}", payloadLength);
+        return null;
+      }
 
       // 페이로드
       if (buffer.Length < offset + payloadLength) return null;
       var payload = new byte[payloadLength];
       Array.Copy(buffer, offset, payload, 0, payloadLength);
+      _logger.LogDebug("페이로드 데이터 (Hex): {Bytes}", BitConverter.ToString(payload));
 
-      var message = _packetManager.ParseMessage(buffer.AsSpan(offset, payloadLength));
-      return message == null ? null : (packetId, sequence, message);
+      var message = _packetManager.ParseMessage(payload);
+      if (message == null)
+      {
+        _logger.LogWarning("메시지 파싱 실패: PacketId={PacketId}", packetId);
+        return null;
+      }
+      _logger.LogInformation("메시지 파싱 성공: PacketId={PacketId}, MessageType={MessageType}", packetId, message.GetType().Name);
+      return (packetId, sequence, message);
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"[PacketSerializer] Deserialization 실패: {ex.Message}");
+      _logger.LogError(ex, "Deserialization 실패");
       return null;
     }
   }

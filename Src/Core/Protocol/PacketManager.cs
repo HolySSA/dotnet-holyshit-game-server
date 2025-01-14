@@ -36,10 +36,13 @@ public class PacketManager : IPacketManager
 
       var property = typeof(GamePacket).GetProperty(payloadCase.ToString());
       if (property != null)
+      {
         _propertyCache[payloadCase] = property;
+        _logger.LogDebug("프로퍼티 캐시 추가: {PayloadCase} -> {PropertyName}", payloadCase, property.Name);
+      }
     }
 
-    _logger.LogInformation("PacketManager 초기화 완료");
+    _logger.LogInformation("PacketManager 초기화 완료: 캐시된 프로퍼티 수={Count}", _propertyCache.Count);
   }
 
   /// <summary>
@@ -50,8 +53,20 @@ public class PacketManager : IPacketManager
     try
     {
       var gamePacket = GamePacket.Parser.ParseFrom(payload.ToArray());
-      return _propertyCache.TryGetValue(gamePacket.PayloadCase, out var property)
-        ? property.GetValue(gamePacket) as IMessage : null;
+      _logger.LogInformation("게임 패킷 파싱됨: PayloadCase={PayloadCase}", gamePacket.PayloadCase);
+
+      if (_propertyCache.TryGetValue(gamePacket.PayloadCase, out var property))
+      {
+        var message = property.GetValue(gamePacket) as IMessage;
+        if (message == null)
+        {
+          _logger.LogWarning("프로퍼티 값을 IMessage로 변환 실패: PayloadCase={PayloadCase}", gamePacket.PayloadCase);
+        }
+        return message;
+      }
+
+      _logger.LogWarning("알 수 없는 페이로드 케이스: {PayloadCase}", gamePacket.PayloadCase);
+      return null;
     }
     catch (Exception ex)
     {

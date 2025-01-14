@@ -6,12 +6,12 @@ import "Game.proto";
 
 message GamePacket {
   oneof payload {
-    C2SGameServerInitRequest gameServerInitRequest = 1;
-    S2CGameServerInitResponse gameServerInitResponse = 2;
-    S2CGameServerInitNotification GameServerInitNotification = 3;
-    C2SPositionUpdateRequest positionUpdateRequest = 4;
-    S2CPositionUpdateResponse positionUpdateResponse = 5;
-    S2CPositionUpdateNotification positionUpdateNotification = 6;
+    C2SGameServerInitRequest GameServerInitRequest = 28;
+    S2CGameServerInitResponse GameServerInitResponse = 29;
+    S2CGameServerInitNotification GameServerInitNotification = 30;
+    C2SPositionUpdateRequest PositionUpdateRequest = 31;
+    S2CPositionUpdateResponse PositionUpdateResponse = 32;
+    S2CPositionUpdateNotification PositionUpdateNotification = 33;
   }
 }
 

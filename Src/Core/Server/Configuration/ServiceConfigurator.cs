@@ -4,6 +4,9 @@ using Core.Client.Interfaces;
 using Core.Client;
 using Microsoft.Extensions.Logging;
 using Core.Protocol;
+using Core.Protocol.Handlers;
+using Utils.Security;
+using Game.Managers;
 
 namespace Core.Server.Configuration;
 
@@ -46,6 +49,10 @@ public static class ServiceConfigurator
   /// </summary>
   public static IServiceCollection AddGameServices(this IServiceCollection services)
   {
+    services.AddSingleton<IRoomManager, RoomManager>();
+    services.AddSingleton<IUserManager, UserManager>();
+    services.AddScoped<GamePacketHandler>();
+    services.AddScoped<JwtTokenValidator>(); 
     return services;
   }
 }

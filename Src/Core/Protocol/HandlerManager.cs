@@ -21,11 +21,13 @@ public class HandlerManager : IHandlerManager
   private readonly ConcurrentDictionary<PacketId, Func<ClientSession, uint, IMessage, Task<HandlerResponse>>> _handlers = new();
   private readonly IClientManager _clientManager;
   private readonly ILogger<HandlerManager> _logger;
+  private readonly GamePacketHandler _gamePacketHandler;
 
-  public HandlerManager(IClientManager clientManager, ILogger<HandlerManager> logger)
+  public HandlerManager(IClientManager clientManager, ILogger<HandlerManager> logger, GamePacketHandler gamePacketHandler)
   {
     _clientManager = clientManager;
     _logger = logger;
+    _gamePacketHandler = gamePacketHandler;
     RegisterHandlers();
   }
 
@@ -34,7 +36,8 @@ public class HandlerManager : IHandlerManager
   /// </summary>
   private void RegisterHandlers()
   {
-    OnHandlers<C2SPositionUpdateRequest>(PacketId.PositionUpdateRequest, GamePacketHandler.HandlePositionUpdate);
+    OnHandlers<C2SGameServerInitRequest>(PacketId.GameServerInitRequest, _gamePacketHandler.HandleGameServerInitRequest);
+    OnHandlers<C2SPositionUpdateRequest>(PacketId.PositionUpdateRequest, _gamePacketHandler.HandlePositionUpdateRequest);
 
     _logger.LogInformation("게임 패킷 핸들러 등록 완료");
   }
