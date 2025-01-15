@@ -20,7 +20,8 @@ message S2CGameServerInitResponse {
 // 게임 시작 알림
 message S2CGameServerInitNotification {
   GameStateData gameState = 1;
-  repeated CharacterPositionData characterPositions = 2;  // 모든 플레이어의 초기 위치
+  repeated UserData users = 2;
+  repeated CharacterPositionData characterPositions = 3;  // 모든 플레이어의 초기 위치
 }
 
 message C2SPositionUpdateRequest {

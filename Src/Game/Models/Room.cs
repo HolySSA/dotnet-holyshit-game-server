@@ -43,6 +43,14 @@ public class Room
   {
     return Users.GetValueOrDefault(userId);
   }
+  
+  /// <summary>
+  /// 방에 있는 모든 유저 조회
+  /// </summary>
+  public List<User> GetUsers()
+  {
+    return Users.Values.ToList();
+  }
 
   /// <summary>
   /// 방에 있는 모든 유저 위치 정보 반환

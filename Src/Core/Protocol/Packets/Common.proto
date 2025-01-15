@@ -61,7 +61,7 @@ message CharacterStateInfoData {
   CharacterStateType state = 1;
   CharacterStateType nextState = 2;
   int64 nextStateAt = 3; // state가 nextState로 풀리는 밀리초 타임스탬프. state가 NONE이면 0
-  int64 stateTargetUserId = 4; // state에 target이 있을 경우
+  int32 stateTargetUserId = 4; // state에 target이 있을 경우
 }
 
 enum CharacterStateType {

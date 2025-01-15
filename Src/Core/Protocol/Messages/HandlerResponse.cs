@@ -11,12 +11,23 @@ public class HandlerResponse
   public IMessage Message { get; }
   public List<int> TargetUserIds { get; }
 
+  public HandlerResponse? NextResponse { get; private set; } // 연속 패킷 전송을 위한 프로퍼티
+
   private HandlerResponse(PacketId packetId, uint sequence, IMessage message, List<int>? targetUserIds = null)
   {
     PacketId = packetId;
     Sequence = sequence;
     Message = message;
     TargetUserIds = targetUserIds ?? new List<int>();
+  }
+
+  /// <summary>
+  /// 다음 패킷 설정
+  /// </summary>
+  public HandlerResponse SetNextResponse(HandlerResponse nextResponse)
+  {
+    NextResponse = nextResponse;
+    return this;
   }
 
   /// <summary>

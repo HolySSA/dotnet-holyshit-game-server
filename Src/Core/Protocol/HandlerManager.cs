@@ -103,5 +103,11 @@ public class HandlerManager : IHandlerManager
         response.Sequence,
         response.Message);
     }
+
+    // 연속된 응답이 있다면 처리
+    if (response.NextResponse != null)
+    {
+      await ProcessResponse(client, response.NextResponse);
+    }
   }
 }

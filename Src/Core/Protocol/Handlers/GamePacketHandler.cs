@@ -85,24 +85,73 @@ public class GamePacketHandler
     room.AddUser(user);
     _logger.LogInformation("유저 {UserId}가 방 {RoomId}에 입장", request.UserId, request.RoomData.Id);
 
-    /*
-    // 게임 상태 정보 생성
-    var gameState = new GameStateData
+    // 로비 데이터의 유저들과 실제 접속한 유저들 비교
+    var lobbyUsers = request.RoomData.Users;
+    var connectedUsers = room.GetUsers();
+
+    // 모든 로비 유저가 게임 서버에 접속했는지 확인
+    if (lobbyUsers.Count == connectedUsers.Count && lobbyUsers.All(lu => connectedUsers.Any(cu => cu.Id == lu.Id)))
     {
-      PhaseType = PhaseType.Day, // 낮
-      NextPhaseAt = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeMilliseconds() // 5분 후 다음 페이즈
-    };
-    */
+      var response = new S2CGameServerInitResponse()
+      {
+        Success = true,
+        FailCode = GlobalFailCode.NoneFailcode
+      };
 
-    var response = new S2CGameServerInitResponse() {
-      Success = true,
-      FailCode = GlobalFailCode.NoneFailcode
-    };
+      var responseGamePacket = new GamePacket();
+      responseGamePacket.GameServerInitResponse = response;
 
-    var gamePacket = new GamePacket();
-    gamePacket.GameServerInitResponse = response;
+      var initResponse = HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, responseGamePacket);
 
-    return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, gamePacket);
+      // 게임 상태 정보 생성
+      var gameState = new GameStateData
+      {
+        PhaseType = PhaseType.Day, // 낮
+        NextPhaseAt = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeMilliseconds() // 5분 후 다음 페이즈
+      };
+
+      // 모든 유저 초기 위치
+      var characterPositions = room.GetAllUserPositions();
+      // 게임 시작 알림 패킷 생성
+      var notification = new S2CGameServerInitNotification
+      {
+        GameState = gameState
+      };
+      notification.Users.AddRange(connectedUsers.Select(u => new UserData
+      {
+        Id = u.Id,
+        Nickname = u.Nickname,
+        Character = u.Character.ToCharacterData()
+      }));
+      notification.CharacterPositions.AddRange(characterPositions);
+
+      var notificationGamePacket = new GamePacket();
+      notificationGamePacket.GameServerInitNotification = notification;
+
+      // 방의 모든 유저 ID 가져오기
+      var userIds = connectedUsers.Select(u => u.Id).ToList();
+      // 브로드캐스트 응답 생성
+      var broadcastResponse = HandlerResponse.CreateBroadcast(
+        PacketId.GameServerInitNotification,
+        notificationGamePacket,
+        userIds
+      );
+
+      return initResponse.SetNextResponse(broadcastResponse);
+    }
+    else
+    {
+      var response = new S2CGameServerInitResponse()
+      {
+        Success = true,
+        FailCode = GlobalFailCode.NoneFailcode
+      };
+
+      var gamePacket = new GamePacket();
+      gamePacket.GameServerInitResponse = response;
+
+      return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, gamePacket);
+    }
   }
 
   public async Task<HandlerResponse> HandlePositionUpdateRequest(ClientSession client, uint sequence, C2SPositionUpdateRequest request)
