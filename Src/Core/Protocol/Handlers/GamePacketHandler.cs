@@ -24,27 +24,8 @@ public class GamePacketHandler
 
   public async Task<HandlerResponse> HandleGameServerInitRequest(ClientSession client, uint sequence, C2SGameServerInitRequest request)
   {
-    if (request == null)
-    {
-        _logger.LogError("요청이 null입니다");
-        return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, 
-            new S2CGameServerInitResponse { Success = false, FailCode = GlobalFailCode.InvalidRequest });
-    }
-
-    // 요청 내용 로깅
-    _logger.LogInformation(
-        "GameServerInit 요청 수신: SessionId={SessionId}, UserId={UserId}, Token={Token}, RoomData={{ Id={RoomId}, Name={RoomName}, OwnerId={OwnerId}, MaxUserNum={MaxUserNum}, UserCount={UserCount} }}",
-        client.SessionId,
-        request.UserId,
-        request.Token,
-        request.RoomData.Id,
-        request.RoomData.Name,
-        request.RoomData.OwnerId,
-        request.RoomData.MaxUserNum,
-        request.RoomData.Users.Count);
-
     // 토큰 검증
-    if (!_tokenValidator.ValidateToken(request.Token, out int userId, out int roomId))
+    if (!_tokenValidator.ValidateToken(request.Token))
     {
       return HandlerResponse.CreateResponse(
         PacketId.GameServerInitResponse,
@@ -57,17 +38,17 @@ public class GamePacketHandler
     }
 
     // 세션에 userId와 roomId 저장
-    client.SetUserId(userId);
-    client.SetRoomId(roomId);
+    client.SetUserId(request.UserId);
+    client.SetRoomId(request.RoomData.Id);
 
     // 방 생성 or 조회
-    var room = _roomManager.GetRoom(roomId);
+    var room = _roomManager.GetRoom(request.RoomData.Id);
     if (room == null)
     {
       room = _roomManager.CreateRoom(request.RoomData);
       if (room == null)
       {
-        _logger.LogError("방 생성 실패: RoomId = {RoomId}", roomId);
+        _logger.LogError("방 생성 실패: RoomId = {RoomId}", request.RoomData.Id);
         return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, new S2CGameServerInitResponse
         {
           Success = false,
@@ -76,11 +57,11 @@ public class GamePacketHandler
       }
     }
 
-    // 유저 생성
-    var userData = request.RoomData.Users.FirstOrDefault(u => u.Id == userId);
+    // RoomData에 존재하는 유저인지 확인
+    var userData = request.RoomData.Users.FirstOrDefault(u => u.Id == request.UserId);
     if (userData == null)
     {
-      _logger.LogError("유저 데이터 없음: UserId = {UserId}", userId);
+      _logger.LogError("유저 데이터 없음: UserId = {UserId}", request.UserId);
       return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, new S2CGameServerInitResponse
       {
         Success = false,
@@ -92,7 +73,7 @@ public class GamePacketHandler
     var user = _userManager.CreateUser(userData);
     if (user == null)
     {
-      _logger.LogError("유저 생성 실패: UserId = {UserId}", userId);
+      _logger.LogError("유저 생성 실패: UserId = {UserId}", request.UserId);
       return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, new S2CGameServerInitResponse
       {
         Success = false,
@@ -102,7 +83,7 @@ public class GamePacketHandler
 
     // 방에 유저 추가
     room.AddUser(user);
-    _logger.LogInformation("유저 {UserId}가 방 {RoomId}에 입장", userId, roomId);
+    _logger.LogInformation("유저 {UserId}가 방 {RoomId}에 입장", request.UserId, request.RoomData.Id);
 
     /*
     // 게임 상태 정보 생성
@@ -113,12 +94,15 @@ public class GamePacketHandler
     };
     */
 
-    // 성공 응답
-    return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, new S2CGameServerInitResponse
-    {
+    var response = new S2CGameServerInitResponse() {
       Success = true,
       FailCode = GlobalFailCode.NoneFailcode
-    });
+    };
+
+    var gamePacket = new GamePacket();
+    gamePacket.GameServerInitResponse = response;
+
+    return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, gamePacket);
   }
 
   public async Task<HandlerResponse> HandlePositionUpdateRequest(ClientSession client, uint sequence, C2SPositionUpdateRequest request)

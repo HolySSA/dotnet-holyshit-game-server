@@ -18,11 +18,8 @@ public class JwtTokenValidator
     _logger = logger;
   }
 
-  public bool ValidateToken(string token, out int userId, out int roomId)
+  public bool ValidateToken(string token)
   {
-    userId = 0;
-    roomId = 0;
-
     try
     {
       var secretKey = _configuration["JwtSettings:SecretKey"];
@@ -47,17 +44,13 @@ public class JwtTokenValidator
         ClockSkew = TimeSpan.Zero
       };
 
-      var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
-
-      userId = int.Parse(principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-      roomId = int.Parse(principal.FindFirst("RoomId")?.Value ?? "0");
-
+      tokenHandler.ValidateToken(token, validationParameters, out _);
       return true;
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, "토큰 검증 실패");
-        return false;
+      _logger.LogError(ex, "토큰 검증 실패");
+      return false;
     }
   }
 }

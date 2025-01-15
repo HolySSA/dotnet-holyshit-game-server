@@ -79,8 +79,6 @@ public class ClientSession : IDisposable
       if (result.HasValue)
       {
         var (packetId, sequence, message) = result.Value;
-        _logger.LogInformation("패킷 역직렬화 성공: SessionId={SessionId}, PacketId={PacketId}, Sequence={Sequence}",
-                SessionId, packetId, sequence);
 
         if (message != null)
           await _messageQueue.EnqueueReceive(packetId, sequence, message);
@@ -112,6 +110,12 @@ public class ClientSession : IDisposable
   {
     if (_disposed)
       throw new ObjectDisposedException(nameof(ClientSession));
+
+    if (data == null)
+    {
+      _logger.LogError("전송할 데이터가 null입니다");
+      return;
+    }
 
     await _clientConnection.SendAsync(data);
   }
