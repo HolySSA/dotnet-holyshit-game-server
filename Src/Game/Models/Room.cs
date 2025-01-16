@@ -11,6 +11,7 @@ public class Room
   public RoomStateType State { get; set; }
   public Dictionary<int, User> Users { get; } = new();
   private readonly SpawnPointPool _spawnPointPool = new();
+  private readonly CardDeck _cardDeck;
 
   public Room(RoomData roomData)
   {
@@ -19,6 +20,7 @@ public class Room
     Name = roomData.Name;
     MaxUserNum = roomData.MaxUserNum;
     State = roomData.State;
+    _cardDeck = new CardDeck();
   }
 
   /// <summary>
@@ -53,15 +55,33 @@ public class Room
   }
 
   /// <summary>
+  /// 초기 카드 분배
+  /// </summary>
+  public void DealInitialCards(User user)
+  {
+      int cardCount = user.Character.Hp;
+      var cards = _cardDeck.DrawCards(cardCount);
+      user.Character.HandCards.AddRange(cards);
+      user.Character.HandCardsCount = cards.Count;
+  }
+
+  /// <summary>
   /// 방에 있는 모든 유저 위치 정보 반환
   /// </summary>
   public List<CharacterPositionData> GetAllUserPositions()
   {
-    return Users.Values.Select(u => new CharacterPositionData
+    return Users.Values.Select(u => u.ToPositionData()).ToList();
+  }
+
+  /// <summary>
+  /// 유저 위치 업데이트
+  /// </summary>
+  public void UpdateUserPosition(int userId, double x, double y)
+  {
+    if (Users.TryGetValue(userId, out var user))
     {
-      Id = u.Id,
-      X = u.X,
-      Y = u.Y
-    }).ToList();
+      user.X = x;
+      user.Y = y;
+    }
   }
 }

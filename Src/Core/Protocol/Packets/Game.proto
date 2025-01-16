@@ -24,16 +24,51 @@ message S2CGameServerInitNotification {
   repeated CharacterPositionData characterPositions = 3;  // 모든 플레이어의 초기 위치
 }
 
+// 유저 위치 업데이트 요청
 message C2SPositionUpdateRequest {
   double x = 1;
   double y = 2;
 }
 
-message S2CPositionUpdateResponse {
+// 유저 위치 업데이트 알림
+message S2CPositionUpdateNotification {
+  repeated CharacterPositionData characterPositions = 1;
+}
+
+// 카드 사용 요청
+message C2SUseCardRequest {
+  CardType cardType = 1;
+  int32 targetUserId = 2; // 타겟 없으면 0
+}
+
+// 카드 사용 응답
+message S2CUseCardResponse { // 성공 여부만 반환하고 대상 유저 효과는 S2CUserUpdateNotification로 통지
   bool success = 1;
   GlobalFailCode failCode = 2;
 }
 
-message S2CPositionUpdateNotification {
-  repeated CharacterPositionData characterPositions = 1;
+// 카드 사용 알림
+message S2CUseCardNotification {
+  CardType cardType = 1;
+  int32 userId = 2;
+  int32 targetUserId = 3; // 타겟 없으면 0
+}
+
+// 장착 카드 알림
+message S2CEquipCardNotification {
+  CardType cardType = 1;
+  int32 userId = 2;
+}
+
+// 카드 효과 알림
+message S2CCardEffectNotification {
+  CardType cardType = 1;
+  int32 userId = 2;
+  bool success = 3;
+}
+
+// 플레어 마켓 알림
+message S2CFleaMarketNotification {
+  repeated CardType cardTypes = 1;
+  repeated int32 pickIndex = 2;
 }

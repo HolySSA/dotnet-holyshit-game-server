@@ -18,6 +18,7 @@ public static class ServiceConfigurator
   public static IServiceCollection AddServerConfiguration(this IServiceCollection services, IConfiguration configuration)
   {
     services.AddSingleton<IConfiguration>(configuration);
+    services.AddSingleton<DataManager>();
 
     // 로깅 설정
     services.AddLogging(builder =>

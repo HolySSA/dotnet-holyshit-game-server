@@ -92,6 +92,8 @@ public class HandlerManager : IHandlerManager
             response.PacketId,
             response.Sequence,
             response.Message);
+
+          _logger.LogInformation("브로드캐스트 전송: PacketId={PacketId}, Sequence={Sequence}", response.PacketId, response.Sequence);
         }
       }
     }
@@ -102,6 +104,8 @@ public class HandlerManager : IHandlerManager
         response.PacketId,
         response.Sequence,
         response.Message);
+
+      _logger.LogInformation("단일 클라이언트 전송: PacketId={PacketId}, Sequence={Sequence}", response.PacketId, response.Sequence);
     }
 
     // 연속된 응답이 있다면 처리

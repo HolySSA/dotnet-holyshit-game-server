@@ -1,4 +1,3 @@
-using Core.Protocol;
 using Core.Protocol.Packets;
 using Google.Protobuf;
 
@@ -35,7 +34,6 @@ public class HandlerResponse
   /// </summary>
   public static HandlerResponse CreateResponse(PacketId packetId, uint sequence, IMessage message)
   {
-    Console.WriteLine($"Creating response: PacketId={packetId}, Message={message}");
     return new HandlerResponse(packetId, sequence, message);
   }
 

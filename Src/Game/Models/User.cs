@@ -1,5 +1,7 @@
 using Core.Protocol.Packets;
 
+namespace Game.Models;
+
 public class User
 {
   public int Id { get; set; }

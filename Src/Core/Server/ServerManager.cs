@@ -13,6 +13,7 @@ public class ServerManager
   private readonly CancellationTokenSource _serverCts;
   private readonly IServiceProvider _serviceProvider;
   private readonly ILogger _logger;
+  private readonly DataManager _dataManager;
 
   private readonly string _host;
   private readonly int _port;
@@ -21,10 +22,12 @@ public class ServerManager
   public ServerManager(
     IServiceProvider serviceProvider,
     ILogger<ServerManager> logger,
-    IConfiguration configuration)
+    IConfiguration configuration,
+    DataManager dataManager)
   {
     _serviceProvider = serviceProvider;
     _logger = logger;
+    _dataManager = dataManager;
     _serverCts = new CancellationTokenSource();
 
     _host = configuration["Server:HOST"] ?? "127.0.0.1";
@@ -39,6 +42,7 @@ public class ServerManager
   {
     try
     {
+      await _dataManager.InitializeDataAsync();
       _tcpListener.Start();
       _isRunning = true;
       _logger.LogInformation("게임 서버 시작 - {Host}:{Port}", _host, _port);

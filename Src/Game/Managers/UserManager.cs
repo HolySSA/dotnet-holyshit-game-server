@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Core.Protocol.Packets;
+using Game.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Game.Managers;

@@ -74,7 +74,6 @@ public class ClientSession : IDisposable
   {
     try
     {
-      _logger.LogInformation("패킷 수신: SessionId={SessionId}, DataLength={Length}", SessionId, data.Length);
       var result = _packetSerializer.Deserialize(data);
       if (result.HasValue)
       {

@@ -1,5 +1,7 @@
 using Core.Protocol.Packets;
 
+namespace Game.Models;
+
 public class Character
 {
   public CharacterType CharacterType { get; set; }
