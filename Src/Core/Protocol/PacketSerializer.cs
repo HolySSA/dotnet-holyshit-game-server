@@ -34,11 +34,6 @@ public class PacketSerializer
 
       var messageType = message.GetType();
       var messageBytes = message.ToByteArray();
-      _logger.LogInformation("메시지 직렬화: PacketId={PacketId}, MessageType={MessageType}, Content={Content}, ByteLength={Length}", 
-            packetId, 
-            messageType.Name,  // 실제 구체적인 타입 이름
-            message.ToString(),  // 메시지 내용
-            messageBytes.Length);
       var versionBytes = Encoding.UTF8.GetBytes(VERSION);
       var totalLength = HEADER_SIZE + versionBytes.Length + messageBytes.Length;
       var result = new byte[totalLength];
@@ -60,11 +55,6 @@ public class PacketSerializer
 
       // 페이로드
       messageBytes.CopyTo(result, offset);
-
-      _logger.LogInformation("패킷 직렬화 완료: TotalLength={Length}, MessageType={MessageType}, Data={Data}", 
-            result.Length,
-            messageType.Name,
-            BitConverter.ToString(result));
 
       return result;
     }
@@ -179,7 +169,7 @@ public class PacketSerializer
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"[PacketSerializer] GetExpectedPacketSize 실패: {ex.Message}");
+      _logger.LogError(ex, "GetExpectedPacketSize 실패");
       return (false, 0);
     }
   }

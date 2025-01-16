@@ -83,26 +83,25 @@ public class GamePacketHandler
 
     // 방에 유저 추가
     room.AddUser(user);
-    _logger.LogInformation("유저 {UserId}가 방 {RoomId}에 입장", request.UserId, request.RoomData.Id);
+
+    var response = new S2CGameServerInitResponse()
+    {
+      Success = true,
+      FailCode = GlobalFailCode.NoneFailcode
+    };
+
+    var responseGamePacket = new GamePacket();
+    responseGamePacket.GameServerInitResponse = response;
+
+    var initResponse = HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, responseGamePacket);
 
     // 로비 데이터의 유저들과 실제 접속한 유저들 비교
     var lobbyUsers = request.RoomData.Users;
     var connectedUsers = room.GetUsers();
 
     // 모든 로비 유저가 게임 서버에 접속했는지 확인
-    if (lobbyUsers.Count == connectedUsers.Count && lobbyUsers.All(lu => connectedUsers.Any(cu => cu.Id == lu.Id)))
+    if (lobbyUsers.Count == connectedUsers.Count)
     {
-      var response = new S2CGameServerInitResponse()
-      {
-        Success = true,
-        FailCode = GlobalFailCode.NoneFailcode
-      };
-
-      var responseGamePacket = new GamePacket();
-      responseGamePacket.GameServerInitResponse = response;
-
-      var initResponse = HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, responseGamePacket);
-
       // 게임 상태 정보 생성
       var gameState = new GameStateData
       {
@@ -139,19 +138,8 @@ public class GamePacketHandler
 
       return initResponse.SetNextResponse(broadcastResponse);
     }
-    else
-    {
-      var response = new S2CGameServerInitResponse()
-      {
-        Success = true,
-        FailCode = GlobalFailCode.NoneFailcode
-      };
 
-      var gamePacket = new GamePacket();
-      gamePacket.GameServerInitResponse = response;
-
-      return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, gamePacket);
-    }
+    return initResponse;
   }
 
   public async Task<HandlerResponse> HandlePositionUpdateRequest(ClientSession client, uint sequence, C2SPositionUpdateRequest request)
