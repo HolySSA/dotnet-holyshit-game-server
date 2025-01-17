@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Numerics;
 
 namespace Game.Models;
@@ -5,8 +6,9 @@ namespace Game.Models;
 public class SpawnPointPool
 {
   private readonly List<Vector2> _allSpawnPoints;
-  private readonly HashSet<Vector2> _usedSpawnPoints = new();
-  private readonly Random _random = new();
+  private readonly ConcurrentDictionary<Vector2, bool> _usedSpawnPoints;
+  private readonly Random _random;
+  private readonly object _lock = new object();
 
   public SpawnPointPool()
   {
@@ -33,24 +35,35 @@ public class SpawnPointPool
       new(15.337f, -12.296f),
       new(-15.202f, -4.736f)
     };
+    _usedSpawnPoints = new ConcurrentDictionary<Vector2, bool>();
+    _random = new Random();
   }
 
+  /// <summary>
+  /// 랜덤 스폰 포인트 반환
+  /// </summary>
   public Vector2? GetRandomSpawnPoint()
   {
-    var availablePoints = _allSpawnPoints.Where(p => !_usedSpawnPoints.Contains(p)).ToList();
+    var availablePoints = _allSpawnPoints.Where(p => !_usedSpawnPoints.ContainsKey(p)).ToList();
     if (!availablePoints.Any())
-        return null;
+      return null;
 
     var spawnPoint = availablePoints[_random.Next(availablePoints.Count)];
-    _usedSpawnPoints.Add(spawnPoint);
+    _usedSpawnPoints.TryAdd(spawnPoint, true);
     return spawnPoint;
   }
 
+  /// <summary>
+  /// 스폰 포인트 해제
+  /// </summary>
   public void ReleaseSpawnPoint(Vector2 point)
   {
-    _usedSpawnPoints.Remove(point);
+    _usedSpawnPoints.TryRemove(point, out _);
   }
 
+  /// <summary>
+  /// 스폰 포인트 초기화
+  /// </summary>
   public void Reset()
   {
     _usedSpawnPoints.Clear();

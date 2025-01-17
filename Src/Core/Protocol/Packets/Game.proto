@@ -54,7 +54,7 @@ message S2CUseCardNotification {
   int32 targetUserId = 3; // 타겟 없으면 0
 }
 
-// 장착 카드 알림
+// 카드 장착 알림
 message S2CEquipCardNotification {
   CardType cardType = 1;
   int32 userId = 2;

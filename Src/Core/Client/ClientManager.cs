@@ -53,6 +53,14 @@ public class ClientManager : IClientManager
   {
     lock (_lock)
     {
+      // 기존 세션이 있다면 제거
+      if (_userSessions.TryGetValue(userId, out var existingSession))
+      {
+        _logger.LogWarning("기존 유저 세션 발견. 제거 중: UserId={UserId}, OldSessionId={OldSessionId}", userId, existingSession.SessionId);
+        existingSession.Dispose();
+        _userSessions.Remove(userId);
+      }
+
       if (_userSessions.TryAdd(userId, session))
         _logger.LogInformation("유저 세션 등록: UserId={UserId}, SessionId={SessionId}", userId, session.SessionId);
       else

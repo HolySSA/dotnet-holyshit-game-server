@@ -18,11 +18,11 @@ public class JwtTokenValidator
     _logger = logger;
   }
 
-  public bool ValidateToken(string token)
+  public async Task<bool> ValidateToken(string token)
   {
     try
     {
-      var secretKey = _configuration["JwtSettings:SecretKey"];
+      var secretKey = await Task.Run(() => _configuration["JwtSettings:SecretKey"]);
       if (string.IsNullOrEmpty(secretKey))
       {
         _logger.LogError("JWT SecretKey가 설정되지 않았습니다.");
@@ -44,7 +44,7 @@ public class JwtTokenValidator
         ClockSkew = TimeSpan.Zero
       };
 
-      tokenHandler.ValidateToken(token, validationParameters, out _);
+      await Task.Run(() => tokenHandler.ValidateToken(token, validationParameters, out _));
       return true;
     }
     catch (Exception ex)

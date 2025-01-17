@@ -22,6 +22,9 @@ public class ClientSession : IDisposable
   public IServiceProvider ServiceProvider { get; } // DI 컨테이너
   public MessageQueue MessageQueue => _messageQueue; // 메시지 큐 접근자
 
+  private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1);
+  private readonly CancellationTokenSource _sessionCts = new CancellationTokenSource();
+
   public ClientSession(TcpClient client, IServiceProvider serviceProvider)
   {
     SessionId = Guid.NewGuid().ToString();
@@ -108,7 +111,7 @@ public class ClientSession : IDisposable
   public async Task SendAsync(byte[] data)
   {
     if (_disposed)
-      throw new ObjectDisposedException(nameof(ClientSession));
+      return;
 
     if (data == null)
     {
@@ -116,7 +119,23 @@ public class ClientSession : IDisposable
       return;
     }
 
-    await _clientConnection.SendAsync(data);
+    try
+    {
+      await _sendLock.WaitAsync();
+      try
+      {
+        await _clientConnection.SendAsync(data);
+      }
+      finally
+      {
+        _sendLock.Release();
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "데이터 전송 중 오류 발생: SessionId={SessionId}", SessionId);
+      Dispose();
+    }
   }
 
   /// <summary>
@@ -144,17 +163,23 @@ public class ClientSession : IDisposable
     if (_disposed) return;
     _disposed = true;
 
-    try
+    lock (this)
     {
-      _clientManager.RemoveSession(this);
-      _clientConnection.Dispose();
-      ServiceScope?.Dispose();
+      try
+      {
+        _sessionCts.Cancel();
+        _clientManager.RemoveSession(this);
+        _clientConnection.Dispose();
+        ServiceScope?.Dispose();
+        _sendLock.Dispose();
+        _sessionCts.Dispose();
 
-      _logger.LogInformation("세션 종료: {SessionId}", SessionId);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "세션 정리 중 오류 발생: {SessionId}", SessionId);
+        _logger.LogInformation("세션 종료: {SessionId}", SessionId);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "세션 정리 중 오류 발생: {SessionId}", SessionId);
+      }
     }
   }
 }

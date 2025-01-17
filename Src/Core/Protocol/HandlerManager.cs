@@ -38,6 +38,7 @@ public class HandlerManager : IHandlerManager
   {
     OnHandlers<C2SGameServerInitRequest>(PacketId.GameServerInitRequest, _gamePacketHandler.HandleGameServerInitRequest);
     OnHandlers<C2SPositionUpdateRequest>(PacketId.PositionUpdateRequest, _gamePacketHandler.HandlePositionUpdateRequest);
+    OnHandlers<C2SUseCardRequest>(PacketId.UseCardRequest, _gamePacketHandler.HandleUseCardRequest);
 
     _logger.LogInformation("게임 패킷 핸들러 등록 완료");
   }
@@ -54,7 +55,7 @@ public class HandlerManager : IHandlerManager
   /// <summary>
   /// 메시지 처리
   /// </summary>
-   public async Task HandleMessageAsync(ClientSession client, PacketId packetId, uint sequence, IMessage message)
+  public async Task HandleMessageAsync(ClientSession client, PacketId packetId, uint sequence, IMessage message)
   {
     if (!_handlers.TryGetValue(packetId, out var handler))
     {

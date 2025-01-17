@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Core.Protocol.Messages;
 using Utils.Security;
 using Game.Managers;
+using Game.Models;
 
 namespace Core.Protocol.Handlers;
 
@@ -27,7 +28,7 @@ public class GamePacketHandler
     try
     {
       // 토큰 검증
-      if (!_tokenValidator.ValidateToken(request.Token))
+      if (!await _tokenValidator.ValidateToken(request.Token))
       {
         return HandlerResponse.CreateResponse(
           PacketId.GameServerInitResponse,
@@ -43,50 +44,44 @@ public class GamePacketHandler
       client.SetUserId(request.UserId);
       client.SetRoomId(request.RoomData.Id);
 
-      // 방 생성 or 조회
-      var room = _roomManager.GetRoom(request.RoomData.Id);
+      // 방 생성(이미 존재 시 조회)
+      var room = _roomManager.CreateRoom(request.RoomData);
+
       if (room == null)
       {
-        room = _roomManager.CreateRoom(request.RoomData);
-        if (room == null)
+        _logger.LogError("방 생성 실패: RoomId = {RoomId}", request.RoomData.Id);
+        return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, new S2CGameServerInitResponse
         {
-          _logger.LogError("방 생성 실패: RoomId = {RoomId}", request.RoomData.Id);
-          return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, new S2CGameServerInitResponse
-          {
-            Success = false,
-            FailCode = GlobalFailCode.RoomNotFound
-          });
+          Success = false,
+          FailCode = GlobalFailCode.RoomNotFound
+        });
+      }
+
+      // 동시성 제어를 위한 락 획득
+      await room.EnterRoomAsync(async () =>
+      {
+        // RoomData에 존재하는 유저인지 확인
+        var userData = request.RoomData.Users.FirstOrDefault(u => u.Id == request.UserId);
+        if (userData == null)
+        {
+          _logger.LogError("유저 데이터 없음: UserId = {UserId}", request.UserId);
+          return false;
         }
-      }
 
-      // RoomData에 존재하는 유저인지 확인
-      var userData = request.RoomData.Users.FirstOrDefault(u => u.Id == request.UserId);
-      if (userData == null)
-      {
-        _logger.LogError("유저 데이터 없음: UserId = {UserId}", request.UserId);
-        return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, new S2CGameServerInitResponse
+        // 유저 생성
+        var user = _userManager.CreateUser(userData);
+        if (user == null)
         {
-          Success = false,
-          FailCode = GlobalFailCode.CharacterNotFound
-        });
-      }
+          _logger.LogError("유저 생성 실패: UserId = {UserId}", request.UserId);
+          return false;
+        }
 
-      // 유저 생성
-      var user = _userManager.CreateUser(userData);
-      if (user == null)
-      {
-        _logger.LogError("유저 생성 실패: UserId = {UserId}", request.UserId);
-        return HandlerResponse.CreateResponse(PacketId.GameServerInitResponse, sequence, new S2CGameServerInitResponse
-        {
-          Success = false,
-          FailCode = GlobalFailCode.CharacterNotFound
-        });
-      }
+        room.AddUser(user); // 방에 유저 추가
+        room.DealInitialCards(user); // 초기 카드 분배
+        return true;
+      });
 
-      room.AddUser(user); // 방에 유저 추가
-      room.DealInitialCards(user); // 초기 카드 분배
-
-      var response = new S2CGameServerInitResponse()
+      var response = new S2CGameServerInitResponse
       {
         Success = true,
         FailCode = GlobalFailCode.NoneFailcode
@@ -181,5 +176,101 @@ public class GamePacketHandler
       notificationGamePacket,
       userIds
     );
+  }
+
+  public async Task<HandlerResponse> HandleUseCardRequest(ClientSession client, uint sequence, C2SUseCardRequest request)
+  {
+    var room = _roomManager.GetRoom(client.RoomId);
+    if (room == null)
+    {
+      _logger.LogError("방을 찾을 수 없음: RoomId = {RoomId}", client.RoomId);
+      return HandlerResponse.CreateResponse(PacketId.UseCardResponse, sequence, new S2CUseCardResponse
+      {
+        Success = false,
+        FailCode = GlobalFailCode.RoomNotFound
+      });
+    }
+
+    // 카드를 사용하려는 유저 조회
+    var user = room.GetUser(client.UserId);
+    if (user == null)
+    {
+      _logger.LogError("유저를 찾을 수 없음: UserId = {UserId}", client.UserId);
+      return HandlerResponse.CreateResponse(PacketId.UseCardResponse, sequence, new S2CUseCardResponse
+      {
+        Success = false,
+        FailCode = GlobalFailCode.CharacterNotFound
+      });
+    }
+
+    // 타겟 유저 확인 (타겟이 필요한 카드의 경우)
+    User? targetUser = null;
+    if (request.TargetUserId != 0)
+    {
+      targetUser = room.GetUser(request.TargetUserId);
+      if (targetUser == null)
+      {
+        _logger.LogError("타겟 유저를 찾을 수 없음: TargetUserId = {TargetUserId}", request.TargetUserId);
+        return HandlerResponse.CreateResponse(PacketId.UseCardResponse, sequence, new S2CUseCardResponse
+        {
+          Success = false,
+          FailCode = GlobalFailCode.CharacterNotFound
+        });
+      }
+    }
+
+    // 카드 사용 처리
+    if (!room.UseCard(user, targetUser, request.CardType))
+    {
+      _logger.LogError("카드 사용 실패: UserId = {UserId}, CardType = {CardType}", client.UserId, request.CardType);
+      return HandlerResponse.CreateResponse(PacketId.UseCardResponse, sequence, new S2CUseCardResponse
+      {
+        Success = false,
+        FailCode = GlobalFailCode.InvalidRequest
+      });
+    }
+
+    // 카드 사용 응답 패킷 생성
+    var response = new S2CUseCardResponse
+    {
+      Success = true,
+      FailCode = GlobalFailCode.NoneFailcode
+    };
+
+    var responseGamePacket = new GamePacket();
+    responseGamePacket.UseCardResponse = response;
+
+    var initResponse = HandlerResponse.CreateResponse(PacketId.UseCardResponse, sequence, responseGamePacket);
+
+    // 카드 사용 알림 패킷 생성
+    var notification = new S2CUseCardNotification
+    {
+      UserId = client.UserId,
+      CardType = request.CardType,
+      TargetUserId = request.TargetUserId
+    };
+
+    var notificationGamePacket = new GamePacket();
+    notificationGamePacket.UseCardNotification = notification;
+
+    // 방에 있는 모든 유저ID
+    var userIds = room.GetUsers().Select(u => u.Id).ToList();
+
+    // 브로드캐스트 전송
+    var broadcastResponse = HandlerResponse.CreateBroadcast(PacketId.UseCardNotification, notificationGamePacket, userIds);
+    var useCardResponses = initResponse.SetNextResponse(broadcastResponse);
+
+    // 카드 장착 알림 패킷 생성
+    var equipCardNotification = new S2CEquipCardNotification
+    {
+      CardType = request.CardType,
+      UserId = client.UserId
+    };
+
+    var equipCardGamePacket = new GamePacket();
+    equipCardGamePacket.EquipCardNotification = equipCardNotification;
+
+    var equipBroadcastResponse = HandlerResponse.CreateBroadcast(PacketId.EquipCardNotification, equipCardGamePacket, userIds);
+    return useCardResponses.SetNextResponse(equipBroadcastResponse);
   }
 }

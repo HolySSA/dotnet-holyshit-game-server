@@ -11,6 +11,12 @@ message GamePacket {
     S2CGameServerInitNotification GameServerInitNotification = 30;
     C2SPositionUpdateRequest PositionUpdateRequest = 31;
     S2CPositionUpdateNotification PositionUpdateNotification = 32;
+    C2SUseCardRequest UseCardRequest = 33;
+    S2CUseCardResponse UseCardResponse = 34;
+    S2CUseCardNotification UseCardNotification = 35;
+    S2CEquipCardNotification EquipCardNotification = 36;
+    S2CCardEffectNotification CardEffectNotification = 37;
+    S2CFleaMarketNotification FleaMarketNotification = 38;
   }
 }
 
@@ -23,5 +29,12 @@ enum PacketId {
   GameServerInitNotification = 30;
   PositionUpdateRequest = 31;
   PositionUpdateNotification = 32;
+  UseCardRequest = 33;
+  UseCardResponse = 34;
+  UseCardNotification = 35;
+  EquipCardNotification = 36;
+  CardEffectNotification = 37;
+  FleaMarketNotification = 38;
+
 
 }

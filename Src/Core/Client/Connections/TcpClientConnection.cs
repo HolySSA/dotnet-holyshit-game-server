@@ -61,14 +61,38 @@ public class TcpClientConnection : IClientConnection
     var buffer = new byte[4096];
     var messageBuffer = new List<byte>();
 
-    while (!cancellationToken.IsCancellationRequested && !_disposed)
+    try
     {
-      int bytesRead = await _stream.ReadAsync(buffer, cancellationToken);
-      if (bytesRead == 0) break; // 연결 종료
+      while (!cancellationToken.IsCancellationRequested && !_disposed)
+      {
+        int bytesRead;
+        try 
+        {
+          bytesRead = await _stream.ReadAsync(buffer, cancellationToken);
+        }
+        catch (IOException ex) when (ex.InnerException is SocketException socketEx
+          && (socketEx.SocketErrorCode == SocketError.ConnectionReset 
+          || socketEx.SocketErrorCode == SocketError.ConnectionAborted))
+        {
+          _logger.LogInformation("클라이언트가 연결을 종료했습니다.");
+          break;
+        }
 
-      messageBuffer.AddRange(buffer.Take(bytesRead));
-      OnDataReceived?.Invoke(messageBuffer.ToArray());
-      messageBuffer.Clear();
+        if (bytesRead == 0) 
+        {
+          _logger.LogInformation("정상적인 연결 종료");
+          break;
+        }
+
+        messageBuffer.AddRange(buffer.Take(bytesRead));
+        OnDataReceived?.Invoke(messageBuffer.ToArray());
+        messageBuffer.Clear();
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "데이터 수신 중 오류 발생");
+      throw;
     }
   }
 

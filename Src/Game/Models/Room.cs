@@ -13,6 +13,8 @@ public class Room
   private readonly SpawnPointPool _spawnPointPool = new();
   private readonly CardDeck _cardDeck;
 
+  private readonly SemaphoreSlim _roomLock = new SemaphoreSlim(1, 1);
+
   public Room(RoomData roomData)
   {
     Id = roomData.Id;
@@ -21,6 +23,19 @@ public class Room
     MaxUserNum = roomData.MaxUserNum;
     State = roomData.State;
     _cardDeck = new CardDeck();
+  }
+
+  public async Task<bool> EnterRoomAsync(Func<Task<bool>> action)
+  {
+    try
+    {
+      await _roomLock.WaitAsync();
+      return await action();
+    }
+    finally
+    {
+      _roomLock.Release();
+    }
   }
 
   /// <summary>
@@ -59,10 +74,30 @@ public class Room
   /// </summary>
   public void DealInitialCards(User user)
   {
-      int cardCount = user.Character.Hp;
-      var cards = _cardDeck.DrawCards(cardCount);
-      user.Character.HandCards.AddRange(cards);
-      user.Character.HandCardsCount = cards.Count;
+    int cardCount = user.Character.Hp;
+    var cards = _cardDeck.DrawCards(cardCount);
+    user.Character.HandCards.AddRange(cards);
+    user.Character.HandCardsCount = cards.Count;
+  }
+
+  /// <summary>
+  /// 카드 사용
+  /// </summary>
+  public bool UseCard(User user, User? targetUser, CardType cardType)
+  {
+    // 해당 카드 찾기
+    var cardIndex = user.Character.HandCards.FindIndex(c => c.Type == cardType);
+    if (cardIndex == -1)
+      return false;
+
+    // 카드 사용 처리
+    var usedCard = user.Character.HandCards[cardIndex];
+    user.Character.HandCards.RemoveAt(cardIndex);
+    user.Character.HandCardsCount--;
+
+    // 사용한 카드 덱 맨 아래에 추가
+    _cardDeck.AddUsedCard(usedCard);
+    return true;
   }
 
   /// <summary>

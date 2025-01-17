@@ -86,4 +86,12 @@ public class CardDeck
   /// 남은 카드 수
   /// </summary>
   public int RemainingCards => _cards.Count;
+
+  /// <summary>
+  /// 사용한 카드 덱 맨 아래에 다시 추가
+  /// </summary>
+  public void AddUsedCard(CardData card)
+  {
+    _cards.Add(card); // 맨 뒤에 추가
+  }
 }
