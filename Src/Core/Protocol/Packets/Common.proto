@@ -133,6 +133,11 @@ message CharacterPositionData {
   double y = 3;
 }
 
+enum ReactionType {
+  NONE_REACTION = 0;
+  NOT_USE_CARD = 1;
+}
+
 enum GlobalFailCode {
   NONE_FAILCODE = 0;
   UNKNOWN_ERROR = 1;

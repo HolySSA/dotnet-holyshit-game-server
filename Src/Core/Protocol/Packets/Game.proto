@@ -72,3 +72,19 @@ message S2CFleaMarketNotification {
   repeated CardType cardTypes = 1;
   repeated int32 pickIndex = 2;
 }
+
+// 유저 업데이트 알림
+message S2CUserUpdateNotification {
+  repeated UserData user = 1;
+}
+
+// 빵야(공격) 당했을 경우 반응 요청
+message C2SReactionRequest {
+  ReactionType reactionType = 1;
+}
+
+// 빵야(공격) 당했을 경우 반응 응답
+message S2CReactionResponse {
+  bool success = 1;
+  GlobalFailCode failCode = 2;
+}

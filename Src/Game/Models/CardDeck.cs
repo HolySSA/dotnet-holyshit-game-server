@@ -18,6 +18,9 @@ public class CardDeck
   /// </summary>
   private void InitializeDeck()
   {
+    AddCards(CardType.Bbang, 30);
+    AddCards(CardType.Shield, 30);
+    /*
     AddCards(CardType.Bbang, 20);
     AddCards(CardType.BigBbang, 1);
     AddCards(CardType.Shield, 10);
@@ -41,6 +44,7 @@ public class CardDeck
     AddCards(CardType.ContainmentUnit, 3);
     AddCards(CardType.SatelliteTarget, 1);
     AddCards(CardType.Bomb, 1);
+    */
   }
 
   /// <summary>

@@ -17,6 +17,9 @@ message GamePacket {
     S2CEquipCardNotification EquipCardNotification = 36;
     S2CCardEffectNotification CardEffectNotification = 37;
     S2CFleaMarketNotification FleaMarketNotification = 38;
+    S2CUserUpdateNotification UserUpdateNotification = 41;
+    C2SReactionRequest ReactionRequest = 43;
+    S2CReactionResponse ReactionResponse = 44;
   }
 }
 
@@ -35,6 +38,7 @@ enum PacketId {
   EquipCardNotification = 36;
   CardEffectNotification = 37;
   FleaMarketNotification = 38;
-
-
+  UserUpdateNotification = 41;
+  ReactionRequest = 43;
+  ReactionResponse = 44;
 }
