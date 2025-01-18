@@ -271,6 +271,99 @@ public class GamePacketHandler
     equipCardGamePacket.EquipCardNotification = equipCardNotification;
 
     var equipBroadcastResponse = HandlerResponse.CreateBroadcast(PacketId.EquipCardNotification, equipCardGamePacket, userIds);
-    return useCardResponses.SetNextResponse(equipBroadcastResponse);
+    var equipResponse = useCardResponses.SetNextResponse(equipBroadcastResponse);
+
+    // 유저 상태 업데이트
+    user.Character.State = CharacterStateType.BbangShooter;
+    user.Character.StateTargetUserId = targetUser?.Id ?? 0;
+    if (targetUser != null)
+    {
+      targetUser.Character.State = CharacterStateType.BbangTarget;
+      targetUser.Character.StateTargetUserId = user.Id;
+    }
+
+    // 전체 유저 상태 업데이트
+    var userUpdateNotification = new S2CUserUpdateNotification();
+    userUpdateNotification.User.AddRange(room.GetUsers().Select(u => new UserData
+    {
+      Id = u.Id,
+      Nickname = u.Nickname,
+      Character = u.Character.ToCharacterData()
+    }));
+
+    var userUpdateGamePacket = new GamePacket();
+    userUpdateGamePacket.UserUpdateNotification = userUpdateNotification;
+
+    var userUpdateBroadcast = HandlerResponse.CreateBroadcast(PacketId.UserUpdateNotification, userUpdateGamePacket, userIds);
+    return equipResponse.SetNextResponse(userUpdateBroadcast);
+  }
+
+  public async Task<HandlerResponse> HandleReactionRequest(ClientSession client, uint sequence, C2SReactionRequest request)
+  {
+    var room = _roomManager.GetRoom(client.RoomId);
+    if (room == null)
+    {
+      _logger.LogError("방을 찾을 수 없음: RoomId = {RoomId}", client.RoomId);
+      return HandlerResponse.CreateResponse(PacketId.ReactionResponse, sequence, new S2CReactionResponse
+      {
+        Success = false,
+        FailCode = GlobalFailCode.RoomNotFound
+      });
+    }
+
+    var targetUser = room.GetUser(client.UserId);
+    if (targetUser == null)
+    {
+      _logger.LogError("유저를 찾을 수 없음: UserId = {UserId}", client.UserId);
+      return HandlerResponse.CreateResponse(PacketId.ReactionResponse, sequence, new S2CReactionResponse
+      {
+        Success = false,
+        FailCode = GlobalFailCode.CharacterNotFound
+      });
+    }
+
+    // 응답 패킷 생성
+    var reactionResponse = new S2CReactionResponse
+    {
+      Success = true,
+      FailCode = GlobalFailCode.NoneFailcode
+    };
+
+    var reactionGamePacket = new GamePacket();
+    reactionGamePacket.ReactionResponse = reactionResponse;
+    var initResponse = HandlerResponse.CreateResponse(PacketId.ReactionResponse, sequence, reactionGamePacket);
+
+    // 빵야 시전자
+    var shooterUserId = targetUser.Character.StateTargetUserId;
+
+    // 대상자 HP 감소 및 상태 초기화
+    targetUser.Character.Hp -= 1;
+    targetUser.Character.State = CharacterStateType.NoneCharacterState;
+    targetUser.Character.StateTargetUserId = 0;
+
+    // 시전자 상태 업데이트
+    var shooter = room.GetUser(shooterUserId);
+    if (shooter != null)
+    {
+      shooter.Character.State = CharacterStateType.NoneCharacterState;
+      shooter.Character.StateTargetUserId = 0;
+    }
+
+    // 전체 유저 상태 업데이트 알림
+    var userUpdateNotification = new S2CUserUpdateNotification();
+    userUpdateNotification.User.AddRange(room.GetUsers().Select(u => new UserData
+    {
+      Id = u.Id,
+      Nickname = u.Nickname,
+      Character = u.Character.ToCharacterData()
+    }));
+
+    var userUpdateGamePacket = new GamePacket();
+    userUpdateGamePacket.UserUpdateNotification = userUpdateNotification;
+
+    var userIds = room.GetUsers().Select(u => u.Id).ToList();
+    var userUpdateBroadcast = HandlerResponse.CreateBroadcast(PacketId.UserUpdateNotification, userUpdateGamePacket, userIds);
+
+    return initResponse.SetNextResponse(userUpdateBroadcast);
   }
 }
