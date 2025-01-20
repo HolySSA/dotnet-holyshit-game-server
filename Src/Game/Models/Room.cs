@@ -1,28 +1,36 @@
+using Core.Client.Interfaces;
+using Core.Protocol.Messages;
 using Core.Protocol.Packets;
 
 namespace Game.Models;
 
 public class Room
 {
+  private readonly IClientManager _clientManager;
+  private readonly SemaphoreSlim _roomLock = new SemaphoreSlim(1, 1);
+
   public int Id { get; set; }
   public int OwnerId { get; set; }
   public string Name { get; set; }
   public int MaxUserNum { get; set; }
   public RoomStateType State { get; set; }
   public Dictionary<int, User> Users { get; } = new();
-  private readonly SpawnPointPool _spawnPointPool = new();
   private readonly CardDeck _cardDeck;
+  private readonly SpawnPointPool _spawnPointPool = new();
+  private Timer? _phaseTimer;
+  private PhaseType _currentPhase;
 
-  private readonly SemaphoreSlim _roomLock = new SemaphoreSlim(1, 1);
-
-  public Room(RoomData roomData)
+  public Room(RoomData roomData, IClientManager clientManager)
   {
+    _clientManager = clientManager;
+
     Id = roomData.Id;
     OwnerId = roomData.OwnerId;
     Name = roomData.Name;
     MaxUserNum = roomData.MaxUserNum;
     State = roomData.State;
     _cardDeck = new CardDeck();
+    _currentPhase = PhaseType.Day;
   }
 
   public async Task<bool> EnterRoomAsync(Func<Task<bool>> action)
@@ -118,5 +126,101 @@ public class Room
       user.X = x;
       user.Y = y;
     }
+  }
+
+  /// <summary>
+  /// 페이즈 타이머 시작
+  /// </summary>
+  public void StartPhaseTimer()
+  {
+    UpdatePhase();
+  }
+
+  /// <summary>
+  /// 페이즈 업데이트 및 다음 페이즈 예약
+  /// </summary>
+  private async void UpdatePhase()
+  {
+    try
+    {
+      await _roomLock.WaitAsync();
+
+      var nextPhaseTime = _currentPhase == PhaseType.Day ? TimeSpan.FromMinutes(3) : TimeSpan.FromMinutes(1);
+      var nextPhaseAt = DateTimeOffset.UtcNow.Add(nextPhaseTime);
+      
+      // 밤이 될 경우, 캐릭터 위치 재배치
+      if (_currentPhase == PhaseType.Day)
+      {
+        _spawnPointPool.Reset();
+        foreach (var user in Users.Values)
+        {
+          var spawnPoint = _spawnPointPool.GetRandomSpawnPoint();
+          if (spawnPoint.HasValue)
+          {
+            user.X = spawnPoint.Value.X;
+            user.Y = spawnPoint.Value.Y;
+          }
+        }
+      }
+
+      // 페이즈 업데이트 알림 생성
+      var notification = new S2CPhaseUpdateNotification
+      {
+        PhaseType = _currentPhase,
+        NextPhaseAt = nextPhaseAt.ToUnixTimeMilliseconds()
+      };
+      notification.CharacterPositions.AddRange(GetAllUserPositions());
+
+      var gamePacket = new GamePacket();
+      gamePacket.PhaseUpdateNotification = notification;
+
+      // 브로드캐스트 메시지 생성
+      var userIds = Users.Values.Select(u => u.Id).ToList();
+      var broadcastMessage = HandlerResponse.CreateBroadcast(
+        PacketId.PhaseUpdateNotification,
+        gamePacket,
+        userIds
+      );
+
+      // 브로드캐스트 메시지를 각 클라이언트의 메시지 큐에 추가
+      foreach (var userId in userIds)
+      {
+        var session = _clientManager.GetSessionByUserId(userId);
+        if (session != null)
+        {
+          await session.MessageQueue.EnqueueSend(
+            broadcastMessage.PacketId,
+            broadcastMessage.Sequence,
+            broadcastMessage.Message
+          );
+        }
+      }
+
+      // 다음 페이즈 타이머 설정
+      _phaseTimer?.Dispose();
+      _phaseTimer = new Timer(_ =>
+      {
+        _currentPhase = _currentPhase switch
+        {
+          PhaseType.Day => PhaseType.Evening,
+          PhaseType.Evening => PhaseType.Day,
+          _ => PhaseType.Day
+        };
+        UpdatePhase();
+      }, null, nextPhaseTime, Timeout.InfiniteTimeSpan);
+    }
+    finally
+    {
+      _roomLock.Release();
+    }
+  }
+
+  /// <summary>
+  /// 방 종료 시 정리
+  /// </summary>
+  public void Dispose()
+  {
+    _phaseTimer?.Dispose();
+    _roomLock.Dispose();
   }
 }

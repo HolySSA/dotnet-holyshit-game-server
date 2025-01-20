@@ -88,3 +88,20 @@ message S2CReactionResponse {
   bool success = 1;
   GlobalFailCode failCode = 2;
 }
+
+// 페이즈 업데이트 알림
+message S2CPhaseUpdateNotification {
+  PhaseType phaseType = 1; // DAY 1, EVENING 2, END 3
+  int64 nextPhaseAt = 2; // 다음 페이즈 시작 시점(밀리초 타임스탬프)
+  repeated CharacterPositionData characterPositions = 3; // 변경된 캐릭터 위치
+}
+
+// 카드 파괴 요청
+message C2SDestroyCardRequest {
+  repeated CardData destroyCards = 1;
+}
+
+// 카드 파괴 응답
+message S2CDestroyCardResponse {
+  repeated CardData handCards = 1;
+}

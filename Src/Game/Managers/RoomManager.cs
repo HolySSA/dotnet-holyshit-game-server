@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Core.Client.Interfaces;
 using Core.Protocol.Packets;
 using Game.Models;
 using Microsoft.Extensions.Logging;
@@ -16,11 +17,13 @@ public class RoomManager : IRoomManager
 {
   private readonly ConcurrentDictionary<int, Room> _rooms = new();
   private readonly ILogger<RoomManager> _logger;
+  private readonly IClientManager _clientManager;
   private readonly object _lock = new object(); // 동시성 문제 방지
 
-  public RoomManager(ILogger<RoomManager> logger)
+  public RoomManager(ILogger<RoomManager> logger, IClientManager clientManager)
   {
     _logger = logger;
+    _clientManager = clientManager;
   }
 
   public Room? CreateRoom(RoomData roomData)
@@ -32,7 +35,7 @@ public class RoomManager : IRoomManager
         return existingRoom;
 
       // 방 생성
-      var room = new Room(roomData);
+      var room = new Room(roomData, _clientManager);
       if (_rooms.TryAdd(room.Id, room))
       {
         _logger.LogInformation("방 생성: {RoomId}", room.Id);

@@ -99,11 +99,13 @@ public class GamePacketHandler
       // 모든 로비 유저가 게임 서버에 접속했는지 확인
       if (lobbyUsers.Count == connectedUsers.Count)
       {
+        // 페이즈 타이머 시작
+        room.StartPhaseTimer();
         // 게임 상태 정보 생성
         var gameState = new GameStateData
         {
           PhaseType = PhaseType.Day, // 낮
-          NextPhaseAt = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeMilliseconds() // 5분 후 다음 페이즈
+          NextPhaseAt = DateTimeOffset.UtcNow.AddMinutes(3).ToUnixTimeMilliseconds() // 3분 후 다음 페이즈
         };
 
         // 모든 유저 초기 위치
