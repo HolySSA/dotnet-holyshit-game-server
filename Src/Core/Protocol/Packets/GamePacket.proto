@@ -23,6 +23,7 @@ message GamePacket {
     S2CReactionResponse ReactionResponse = 44;
     C2SDestroyCardRequest DestroyCardRequest = 45;
     S2CDestroyCardResponse DestroyCardResponse = 46;
+    S2CGameEndNotification GameEndNotification = 47;
   }
 }
 
@@ -47,4 +48,5 @@ enum PacketId {
   ReactionResponse = 44;
   DestroyCardRequest = 45;
   DestroyCardResponse = 46;
+  GameEndNotification = 47;
 }

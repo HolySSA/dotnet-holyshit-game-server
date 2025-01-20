@@ -105,3 +105,9 @@ message C2SDestroyCardRequest {
 message S2CDestroyCardResponse {
   repeated CardData handCards = 1;
 }
+
+// 게임 종료 알림
+message S2CGameEndNotification {
+  repeated int32 winners = 1;
+  WinType winType = 2;
+}

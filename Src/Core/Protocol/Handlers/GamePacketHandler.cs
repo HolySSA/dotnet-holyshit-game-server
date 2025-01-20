@@ -368,4 +368,64 @@ public class GamePacketHandler
 
     return initResponse.SetNextResponse(userUpdateBroadcast);
   }
+
+  public async Task<HandlerResponse> HandleDestroyCardRequest(ClientSession client, uint sequence, C2SDestroyCardRequest request)
+  {
+    var room = _roomManager.GetRoom(client.RoomId);
+    if (room == null)
+    {
+      _logger.LogError("방을 찾을 수 없음: RoomId = {RoomId}", client.RoomId);
+      return HandlerResponse.CreateResponse(PacketId.DestroyCardResponse, sequence, new S2CDestroyCardResponse());
+    }
+
+    var user = room.GetUser(client.UserId);
+    if (user == null)
+    {
+      _logger.LogError("유저를 찾을 수 없음: UserId = {UserId}", client.UserId);
+      return HandlerResponse.CreateResponse(PacketId.DestroyCardResponse, sequence, new S2CDestroyCardResponse());
+    }
+
+    // 버릴 카드들이 존재하는지 확인 후 제거
+    foreach (var cardToDestroy in request.DestroyCards)
+    {
+      var cardIndex = user.Character.HandCards.FindIndex(c => c.Type == cardToDestroy.Type);
+      if (cardIndex == -1)
+      {
+        _logger.LogError("버릴 카드를 찾을 수 없음: UserId = {UserId}, CardType = {CardType}", client.UserId, cardToDestroy.Type);
+        return HandlerResponse.CreateResponse(PacketId.DestroyCardResponse, sequence, new S2CDestroyCardResponse());
+      }
+
+      // 카드 제거
+      user.Character.HandCards.RemoveAt(cardIndex);
+      user.Character.HandCardsCount--;
+    }
+
+    // 응답 생성
+    var response = new S2CDestroyCardResponse();
+    response.HandCards.AddRange(user.Character.HandCards);
+
+    var responseGamePacket = new GamePacket();
+    responseGamePacket.DestroyCardResponse = response;
+
+    // 유저 상태 업데이트 알림 생성
+    var userUpdateNotification = new S2CUserUpdateNotification();
+    userUpdateNotification.User.AddRange(room.GetUsers().Select(u => new UserData
+    {
+      Id = u.Id,
+      Nickname = u.Nickname,
+      Character = u.Character.ToCharacterData()
+    }));
+
+    var userUpdateGamePacket = new GamePacket();
+    userUpdateGamePacket.UserUpdateNotification = userUpdateNotification;
+
+    var userIds = room.GetUsers().Select(u => u.Id).ToList();
+    var userUpdateBroadcast = HandlerResponse.CreateBroadcast(
+      PacketId.UserUpdateNotification,
+      userUpdateGamePacket,
+      userIds
+    );
+
+    return HandlerResponse.CreateResponse(PacketId.DestroyCardResponse, sequence, responseGamePacket).SetNextResponse(userUpdateBroadcast);
+  }
 }

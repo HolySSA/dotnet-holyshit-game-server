@@ -77,6 +77,51 @@ public class Room
     return Users.Values.ToList();
   }
 
+  public async Task RemoveUser(int userId)
+  {
+    try
+    {
+      await _roomLock.WaitAsync();
+
+      if(Users.Remove(userId))
+      {
+        if (Users.Count == 1)
+        {
+          var lastUser = Users.Values.First();
+
+          // 승리 타입
+          var winType = lastUser.Character.RoleType switch
+          {
+            RoleType.Target or RoleType.Bodyguard => WinType.TargetAndBodyguardWin,
+            RoleType.Hitman => WinType.HitmanWin,
+            RoleType.Psychopath => WinType.PsychopathWin,
+            _ => WinType.TargetAndBodyguardWin // 기본값
+          };
+
+          // 게임 종료
+          var notification = new S2CGameEndNotification
+          {
+            WinType = winType
+          };
+          notification.Winners.Add(lastUser.Id);
+
+          var gamePacket = new GamePacket();
+          gamePacket.GameEndNotification = notification;
+
+          var session = _clientManager.GetSessionByUserId(lastUser.Id);
+          if (session != null)
+          {
+            await session.MessageQueue.EnqueueSend(PacketId.GameEndNotification, SequenceGenerator.GetNextSequence(), gamePacket);
+          }
+        }
+      }
+    }
+    finally
+    {
+      _roomLock.Release();
+    }
+  }
+
   /// <summary>
   /// 초기 카드 분배
   /// </summary>

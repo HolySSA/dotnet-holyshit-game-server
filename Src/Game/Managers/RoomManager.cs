@@ -24,6 +24,31 @@ public class RoomManager : IRoomManager
   {
     _logger = logger;
     _clientManager = clientManager;
+
+    // 이벤트 구독
+    _clientManager.OnClientDisconnected += OnClientDisconnected;
+  }
+
+  private async Task OnClientDisconnected(string sessionId, int userId, int roomId)
+  {
+    if (roomId == 0) return;
+
+    var room = GetRoom(roomId);
+    if (room != null)
+    {
+      await room.RemoveUser(userId);
+      _logger.LogInformation("방에서 유저 제거: RoomId={RoomId}, UserId={UserId}", roomId, userId);
+
+      // 방에 유저가 없으면 방 제거
+      if (room.Users.Count == 0)
+        RemoveRoom(roomId);
+    }
+}
+
+  public void Dispose()
+  {
+    // 이벤트 구독 해제
+    _clientManager.OnClientDisconnected -= OnClientDisconnected;
   }
 
   public Room? CreateRoom(RoomData roomData)

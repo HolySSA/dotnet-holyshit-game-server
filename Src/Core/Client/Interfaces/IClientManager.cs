@@ -10,4 +10,7 @@ public interface IClientManager
   bool TryGetSessionByUserId(int userId, out ClientSession? session);
   ClientSession? GetSession(string sessionId);
   ClientSession? GetSessionByUserId(int userId);
+
+  // 이벤트
+  event Func<string, int, int, Task>? OnClientDisconnected; // sessionId, userId, roomId
 }

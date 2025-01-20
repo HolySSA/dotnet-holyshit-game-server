@@ -40,6 +40,7 @@ public class HandlerManager : IHandlerManager
     OnHandlers<C2SPositionUpdateRequest>(PacketId.PositionUpdateRequest, _gamePacketHandler.HandlePositionUpdateRequest);
     OnHandlers<C2SUseCardRequest>(PacketId.UseCardRequest, _gamePacketHandler.HandleUseCardRequest);
     OnHandlers<C2SReactionRequest>(PacketId.ReactionRequest, _gamePacketHandler.HandleReactionRequest);
+    OnHandlers<C2SDestroyCardRequest>(PacketId.DestroyCardRequest, _gamePacketHandler.HandleDestroyCardRequest);
 
     _logger.LogInformation("게임 패킷 핸들러 등록 완료");
   }

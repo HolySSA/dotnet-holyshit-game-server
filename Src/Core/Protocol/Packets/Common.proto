@@ -157,3 +157,9 @@ enum GlobalFailCode {
   INVALID_PHASE = 15;
   CHARACTER_CONTAINED = 16;
 }
+
+enum WinType {
+  TARGET_AND_BODYGUARD_WIN = 0;
+  HITMAN_WIN = 1;
+  PSYCHOPATH_WIN = 2;
+}

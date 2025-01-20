@@ -10,6 +10,7 @@ public class ClientManager : IClientManager
   private readonly Dictionary<int, ClientSession> _userSessions = new();
 
   private readonly object _lock = new(); // 클라이언트 목록 동시 접근 제한 객체
+  public event Func<string, int, int, Task>? OnClientDisconnected; // 클라이언트 연결 종료 이벤트
 
   public ClientManager(ILogger<ClientManager> logger)
   {
@@ -41,6 +42,9 @@ public class ClientManager : IClientManager
       {
         if (session.UserId > 0)
           _userSessions.Remove(session.UserId);
+
+        // 클라이언트 연결 종료 이벤트 발생
+        OnClientDisconnected?.Invoke(session.SessionId, session.UserId, session.RoomId);
         _logger.LogInformation("세션 제거: UserId={UserId}, SessionId={SessionId}", session.UserId, session.SessionId);
       }
     }
