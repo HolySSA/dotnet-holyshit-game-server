@@ -24,6 +24,8 @@ message GamePacket {
     C2SDestroyCardRequest DestroyCardRequest = 45;
     S2CDestroyCardResponse DestroyCardResponse = 46;
     S2CGameEndNotification GameEndNotification = 47;
+    C2SComeBackLobbyRequest ComeBackLobbyRequest = 60;
+    S2CComeBackLobbyResponse ComeBackLobbyResponse = 61;
   }
 }
 
@@ -49,4 +51,6 @@ enum PacketId {
   DestroyCardRequest = 45;
   DestroyCardResponse = 46;
   GameEndNotification = 47;
+  ComeBackLobbyRequest = 60;
+  ComeBackLobbyResponse = 61;
 }

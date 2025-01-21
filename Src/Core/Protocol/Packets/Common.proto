@@ -64,6 +64,12 @@ message CharacterStateInfoData {
   int32 stateTargetUserId = 4; // state에 target이 있을 경우
 }
 
+message ServerInfoData {
+  string host = 1;
+  int32 port = 2;
+  string token = 3;  // 서버 인증용 토큰
+}
+
 enum CharacterStateType {
   NONE_CHARACTER_STATE = 0;
   BBANG_SHOOTER = 1; // 빵야 시전자

@@ -111,3 +111,12 @@ message S2CGameEndNotification {
   repeated int32 winners = 1;
   WinType winType = 2;
 }
+
+message C2SComeBackLobbyRequest {
+
+}
+
+message S2CComeBackLobbyResponse {
+  int32 userId = 1;
+  ServerInfoData serverInfo = 2; // 접속할 로비 서버 정보
+}

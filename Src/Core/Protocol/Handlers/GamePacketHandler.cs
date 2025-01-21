@@ -428,4 +428,23 @@ public class GamePacketHandler
 
     return HandlerResponse.CreateResponse(PacketId.DestroyCardResponse, sequence, responseGamePacket).SetNextResponse(userUpdateBroadcast);
   }
+
+  public async Task<HandlerResponse> HandleComeBackLobbyRequest(ClientSession client, uint sequence, C2SComeBackLobbyRequest request)
+  {
+    var response = new S2CComeBackLobbyResponse
+    {
+      UserId = client.UserId,
+      ServerInfo = new ServerInfoData
+      {
+        Host = "127.0.0.1",
+        Port = 4000,
+        Token = "" // 토큰 검증 불필요
+      }
+    };
+
+    var gamePacket = new GamePacket();
+    gamePacket.ComeBackLobbyResponse = response;
+
+    return HandlerResponse.CreateResponse(PacketId.ComeBackLobbyResponse, sequence, gamePacket);
+  }
 }
