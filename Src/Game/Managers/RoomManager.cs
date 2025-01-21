@@ -18,12 +18,14 @@ public class RoomManager : IRoomManager
   private readonly ConcurrentDictionary<int, Room> _rooms = new();
   private readonly ILogger<RoomManager> _logger;
   private readonly IClientManager _clientManager;
+  private readonly IUserManager _userManager;
   private readonly object _lock = new object(); // 동시성 문제 방지
 
-  public RoomManager(ILogger<RoomManager> logger, IClientManager clientManager)
+  public RoomManager(ILogger<RoomManager> logger, IClientManager clientManager, IUserManager userManager)
   {
     _logger = logger;
     _clientManager = clientManager;
+    _userManager = userManager;
 
     // 이벤트 구독
     _clientManager.OnClientDisconnected += OnClientDisconnected;
@@ -43,6 +45,9 @@ public class RoomManager : IRoomManager
       if (room.Users.Count == 0)
         RemoveRoom(roomId);
     }
+
+    // 유저 제거
+    _userManager.RemoveUser(userId);
 }
 
   public void Dispose()

@@ -431,6 +431,20 @@ public class GamePacketHandler
 
   public async Task<HandlerResponse> HandleComeBackLobbyRequest(ClientSession client, uint sequence, C2SComeBackLobbyRequest request)
   {
+    var room = _roomManager.GetRoom(client.RoomId);
+    if (room != null)
+    {
+      // 방에서 유저 제거
+      await room.RemoveUser(client.UserId);
+
+      // 더 이상 유저 없으면 방 제거
+      if (room.Users.Count == 0)
+        _roomManager.RemoveRoom(client.RoomId);
+    }
+
+    // 유저 제거
+    _userManager.RemoveUser(client.UserId);
+
     var response = new S2CComeBackLobbyResponse
     {
       UserId = client.UserId,
