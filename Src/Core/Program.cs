@@ -12,7 +12,7 @@ class Program
 
     try
     {
-      var serviceProvider = ServerConfiguration.ConfigureServices(args); // 서버 설정 / 초기화
+      var serviceProvider = ServerConfiguration.ConfigureServices(args); // 서버 설정 and 초기화
       _serverManager = serviceProvider.GetRequiredService<ServerManager>(); // 서버 매니저
       await _serverManager.StartAsync(); // 서버 시작
     }

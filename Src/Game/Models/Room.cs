@@ -1,12 +1,14 @@
 using Core.Client.Interfaces;
 using Core.Protocol.Messages;
 using Core.Protocol.Packets;
+using Game.Services;
 
 namespace Game.Models;
 
 public class Room
 {
   private readonly IClientManager _clientManager;
+  private readonly IGameStatsService _gameStatsService;
   private readonly SemaphoreSlim _roomLock = new SemaphoreSlim(1, 1);
 
   public int Id { get; set; }
@@ -21,9 +23,10 @@ public class Room
   private PhaseType _currentPhase;
   private bool _isGameEnd = false;
 
-  public Room(RoomData roomData, IClientManager clientManager)
+  public Room(RoomData roomData, IClientManager clientManager, IGameStatsService gameStatsService)
   {
     _clientManager = clientManager;
+    _gameStatsService = gameStatsService;
 
     Id = roomData.Id;
     OwnerId = roomData.OwnerId;
@@ -99,6 +102,9 @@ public class Room
             _ => WinType.TargetAndBodyguardWin // 기본값
           };
 
+          // 승리 카운트 증가
+          await _gameStatsService.IncrementWinCountAsync(lastUser.Id, lastUser.Character.CharacterType);
+
           // 게임 종료
           var notification = new S2CGameEndNotification
           {
@@ -139,7 +145,8 @@ public class Room
         if (hitman != null)
         {
           winners.Add(hitman.Id);
-          _isGameEnd = true; 
+          _isGameEnd = true;
+          await _gameStatsService.IncrementWinCountAsync(hitman.Id, hitman.Character.CharacterType);
           return (true, WinType.HitmanWin, winners);
         }
       }
@@ -152,7 +159,8 @@ public class Room
         if (otherUsers.All(u => u.Character.Hp <= 0))
         {
           winners.Add(psychopath.Id);
-          _isGameEnd = true; 
+          _isGameEnd = true;
+          await _gameStatsService.IncrementWinCountAsync(psychopath.Id, psychopath.Character.CharacterType);
           return (true, WinType.PsychopathWin, winners);
         }
       }
@@ -161,11 +169,15 @@ public class Room
       var hitmanAndPsychopath = Users.Values.Where(u => u.Character.RoleType == RoleType.Hitman || u.Character.RoleType == RoleType.Psychopath);
       if (hitmanAndPsychopath.All(u => u.Character.Hp <= 0))
       {
-        winners.AddRange(Users.Values.Where(u => u.Character.RoleType == RoleType.Target || u.Character.RoleType == RoleType.Bodyguard).Select(u => u.Id));
-        _isGameEnd = true; 
+        var targetAndBodyguard = Users.Values.Where(u => u.Character.RoleType == RoleType.Target || u.Character.RoleType == RoleType.Bodyguard);
+        winners.AddRange(targetAndBodyguard.Select(u => u.Id));
+        _isGameEnd = true;
+        foreach (var winner in targetAndBodyguard)
+        {
+          await _gameStatsService.IncrementWinCountAsync(winner.Id, winner.Character.CharacterType);
+        }
         return (true, WinType.TargetAndBodyguardWin, winners);
       }
-
       return (false, null, winners);
     }
     finally

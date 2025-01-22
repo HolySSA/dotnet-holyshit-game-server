@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Core.Client.Interfaces;
 using Core.Protocol.Packets;
 using Game.Models;
+using Game.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Game.Managers;
@@ -19,13 +20,15 @@ public class RoomManager : IRoomManager
   private readonly ILogger<RoomManager> _logger;
   private readonly IClientManager _clientManager;
   private readonly IUserManager _userManager;
+  private readonly IGameStatsService _gameStatsService;
   private readonly object _lock = new object(); // 동시성 문제 방지
 
-  public RoomManager(ILogger<RoomManager> logger, IClientManager clientManager, IUserManager userManager)
+  public RoomManager(ILogger<RoomManager> logger, IClientManager clientManager, IUserManager userManager, IGameStatsService gameStatsService)
   {
     _logger = logger;
     _clientManager = clientManager;
     _userManager = userManager;
+    _gameStatsService = gameStatsService;
 
     // 이벤트 구독
     _clientManager.OnClientDisconnected += OnClientDisconnected;
@@ -48,7 +51,7 @@ public class RoomManager : IRoomManager
 
     // 유저 제거
     _userManager.RemoveUser(userId);
-}
+  }
 
   public void Dispose()
   {
@@ -65,13 +68,13 @@ public class RoomManager : IRoomManager
         return existingRoom;
 
       // 방 생성
-      var room = new Room(roomData, _clientManager);
+      var room = new Room(roomData, _clientManager, _gameStatsService);
       if (_rooms.TryAdd(room.Id, room))
       {
         _logger.LogInformation("방 생성: {RoomId}", room.Id);
         return room;
       }
-      
+
       _logger.LogWarning("방 생성 실패: {RoomId}", room.Id);
       return null;
     }

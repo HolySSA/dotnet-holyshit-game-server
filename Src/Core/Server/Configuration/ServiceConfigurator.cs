@@ -7,6 +7,8 @@ using Core.Protocol;
 using Core.Protocol.Handlers;
 using Utils.Security;
 using Game.Managers;
+using Core.Server.Services;
+using Game.Services;
 
 namespace Core.Server.Configuration;
 
@@ -19,6 +21,10 @@ public static class ServiceConfigurator
   {
     services.AddSingleton<IConfiguration>(configuration);
     services.AddSingleton<DataManager>();
+
+    // Redis 설정 및 서비스 등록
+    services.Configure<RedisConfig>(configuration.GetSection("Redis"));
+    services.AddSingleton<IRedisService, RedisService>();
 
     // 로깅 설정
     services.AddLogging(builder =>
@@ -52,6 +58,7 @@ public static class ServiceConfigurator
   {
     services.AddSingleton<IRoomManager, RoomManager>();
     services.AddSingleton<IUserManager, UserManager>();
+    services.AddSingleton<IGameStatsService, GameStatsService>();
     services.AddScoped<GamePacketHandler>();
     services.AddScoped<JwtTokenValidator>(); 
     return services;

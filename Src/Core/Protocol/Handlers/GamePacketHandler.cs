@@ -5,6 +5,7 @@ using Core.Protocol.Messages;
 using Utils.Security;
 using Game.Managers;
 using Game.Models;
+using Game.Services;
 
 namespace Core.Protocol.Handlers;
 
@@ -14,13 +15,15 @@ public class GamePacketHandler
   private readonly ILogger<GamePacketHandler> _logger;
   private readonly IRoomManager _roomManager;
   private readonly IUserManager _userManager;
+  private readonly IGameStatsService _gameStatsService;
 
-  public GamePacketHandler(JwtTokenValidator tokenValidator, ILogger<GamePacketHandler> logger, IRoomManager roomManager, IUserManager userManager)
+  public GamePacketHandler(JwtTokenValidator tokenValidator, ILogger<GamePacketHandler> logger, IRoomManager roomManager, IUserManager userManager, IGameStatsService gameStatsService)
   {
     _tokenValidator = tokenValidator;
     _logger = logger;
     _roomManager = roomManager;
     _userManager = userManager;
+    _gameStatsService = gameStatsService;
   }
 
   public async Task<HandlerResponse> HandleGameServerInitRequest(ClientSession client, uint sequence, C2SGameServerInitRequest request)
@@ -75,6 +78,9 @@ public class GamePacketHandler
           _logger.LogError("유저 생성 실패: UserId = {UserId}", request.UserId);
           return false;
         }
+
+        // 플레이 카운트 증가
+        await _gameStatsService.IncrementPlayCountAsync(request.UserId, user.Character.CharacterType);
 
         room.AddUser(user); // 방에 유저 추가
         room.DealInitialCards(user); // 초기 카드 분배
