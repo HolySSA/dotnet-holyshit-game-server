@@ -19,6 +19,7 @@ public class Room
   private readonly SpawnPointPool _spawnPointPool = new();
   private Timer? _phaseTimer;
   private PhaseType _currentPhase;
+  private bool _isGameEnd = false;
 
   public Room(RoomData roomData, IClientManager clientManager)
   {
@@ -85,7 +86,7 @@ public class Room
 
       if(Users.Remove(userId))
       {
-        if (Users.Count == 1)
+        if (Users.Count == 1 && !_isGameEnd)
         {
           var lastUser = Users.Values.First();
 
@@ -115,6 +116,57 @@ public class Room
           }
         }
       }
+    }
+    finally
+    {
+      _roomLock.Release();
+    }
+  }
+
+  public async Task<(bool isGameEnd, WinType? winType, List<int> winners)> CheckGameEnd()
+  {
+    try
+    {
+      await _roomLock.WaitAsync();
+
+      var winners = new List<int>();
+
+      // 히트맨 승리 조건
+      var target = Users.Values.FirstOrDefault(u => u.Character.RoleType == RoleType.Target);
+      if (target != null && target.Character.Hp <= 0)
+      {
+        var hitman = Users.Values.FirstOrDefault(u => u.Character.RoleType == RoleType.Hitman);
+        if (hitman != null)
+        {
+          winners.Add(hitman.Id);
+          _isGameEnd = true; 
+          return (true, WinType.HitmanWin, winners);
+        }
+      }
+
+      // 사이코패스 승리 조건
+      var psychopath = Users.Values.FirstOrDefault(u => u.Character.RoleType == RoleType.Psychopath);
+      if (psychopath != null)
+      {
+        var otherUsers = Users.Values.Where(u => u.Id != psychopath.Id);
+        if (otherUsers.All(u => u.Character.Hp <= 0))
+        {
+          winners.Add(psychopath.Id);
+          _isGameEnd = true; 
+          return (true, WinType.PsychopathWin, winners);
+        }
+      }
+
+      // 타겟과 보디가드 승리 조건
+      var hitmanAndPsychopath = Users.Values.Where(u => u.Character.RoleType == RoleType.Hitman || u.Character.RoleType == RoleType.Psychopath);
+      if (hitmanAndPsychopath.All(u => u.Character.Hp <= 0))
+      {
+        winners.AddRange(Users.Values.Where(u => u.Character.RoleType == RoleType.Target || u.Character.RoleType == RoleType.Bodyguard).Select(u => u.Id));
+        _isGameEnd = true; 
+        return (true, WinType.TargetAndBodyguardWin, winners);
+      }
+
+      return (false, null, winners);
     }
     finally
     {

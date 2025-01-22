@@ -22,7 +22,7 @@ public class SpawnPointPool
       new(-13.262f, 4.213f),
       new(-22.742f, 3.653f),
       new(-21.622f, -6.936f),
-      new(-124.732f, -6.886f),
+      new(-24.732f, -6.886f),
       new(-15.702f, 6.863f),
       new(-1.562f, 6.173f),
       new(-13.857f, 6.073f),

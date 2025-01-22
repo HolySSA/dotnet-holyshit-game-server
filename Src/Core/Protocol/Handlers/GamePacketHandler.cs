@@ -366,6 +366,23 @@ public class GamePacketHandler
     var userIds = room.GetUsers().Select(u => u.Id).ToList();
     var userUpdateBroadcast = HandlerResponse.CreateBroadcast(PacketId.UserUpdateNotification, userUpdateGamePacket, userIds);
 
+    // 게임 종료 조건 체크
+    var (isGameEnd, winType, winners) = await room.CheckGameEnd();
+    if (isGameEnd && winType.HasValue)
+    {
+      var gameEndNotification = new S2CGameEndNotification
+      {
+        WinType = winType.Value,
+      };
+      gameEndNotification.Winners.AddRange(winners);
+
+      var gameEndPacket = new GamePacket();
+      gameEndPacket.GameEndNotification = gameEndNotification;
+
+      var gameEndBroadcast = HandlerResponse.CreateBroadcast(PacketId.GameEndNotification, gameEndPacket, userIds);
+      return userUpdateBroadcast.SetNextResponse(userUpdateBroadcast).SetNextResponse(gameEndBroadcast);
+    }
+
     return initResponse.SetNextResponse(userUpdateBroadcast);
   }
 

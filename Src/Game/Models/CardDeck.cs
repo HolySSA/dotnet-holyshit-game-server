@@ -6,7 +6,7 @@ namespace Game.Models;
 public class CardDeck
 {
   private readonly List<CardData> _cards = new();
-    
+
   public CardDeck()
   {
     InitializeDeck();
@@ -18,8 +18,7 @@ public class CardDeck
   /// </summary>
   private void InitializeDeck()
   {
-    AddCards(CardType.Bbang, 30);
-    AddCards(CardType.Shield, 30);
+    AddCards(CardType.Bbang, 60);
     /*
     AddCards(CardType.Bbang, 20);
     AddCards(CardType.BigBbang, 1);
