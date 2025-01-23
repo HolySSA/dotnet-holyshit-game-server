@@ -122,6 +122,7 @@ public class ClientSession : IDisposable
     try
     {
       await _sendLock.WaitAsync();
+      
       try
       {
         await _clientConnection.SendAsync(data);

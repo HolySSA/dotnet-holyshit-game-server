@@ -24,8 +24,8 @@ public class RedisService : IRedisService, IDisposable
       var redisConfig = configuration.GetSection("Redis").Get<RedisConfig>();
       var options = new ConfigurationOptions
       {
-        EndPoints = { $"{redisConfig.Host}:{redisConfig.Port}" },
-        Password = redisConfig.Password,
+        EndPoints = { $"{redisConfig?.Host}:{redisConfig?.Port}" },
+        Password = redisConfig?.Password,
         AbortOnConnectFail = false,
         ConnectTimeout = 5000,
         SyncTimeout = 5000

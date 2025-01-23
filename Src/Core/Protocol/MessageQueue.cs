@@ -60,7 +60,7 @@ public class MessageQueue
   /// </summary>
   private async Task ProcessReceiveQueue()
   {
-    if (_processingReceive) return;
+    if (_processingReceive || _session == null) return;
     _processingReceive = true;
 
     try
@@ -88,7 +88,7 @@ public class MessageQueue
   /// </summary>
   private async Task ProcessSendQueue()
   {
-    if (_processingSend) return;
+    if (_processingSend || _session == null) return;
     _processingSend = true;
 
     try

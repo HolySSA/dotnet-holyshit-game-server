@@ -26,6 +26,9 @@ public class GamePacketHandler
     _gameStatsService = gameStatsService;
   }
 
+  /// <summary>
+  /// 게임 서버 초기화 요청 처리
+  /// </summary>
   public async Task<HandlerResponse> HandleGameServerInitRequest(ClientSession client, uint sequence, C2SGameServerInitRequest request)
   {
     try
@@ -157,6 +160,10 @@ public class GamePacketHandler
     }
   }
 
+  /// <summary>
+  /// 위치 업데이트 요청 처리
+  /// </summary>
+  #pragma warning disable CS1998 //이 비동기 메서드에는 'await' 연산자가 없으며 동기적으로 실행.
   public async Task<HandlerResponse> HandlePositionUpdateRequest(ClientSession client, uint sequence, C2SPositionUpdateRequest request)
   {
     var room = _roomManager.GetRoom(client.RoomId);
@@ -185,7 +192,12 @@ public class GamePacketHandler
       userIds
     );
   }
+  #pragma warning restore CS1998
 
+  /// <summary>
+  /// 카드 사용 요청 처리
+  /// </summary>
+  #pragma warning disable CS1998
   public async Task<HandlerResponse> HandleUseCardRequest(ClientSession client, uint sequence, C2SUseCardRequest request)
   {
     var room = _roomManager.GetRoom(client.RoomId);
@@ -305,7 +317,11 @@ public class GamePacketHandler
     var userUpdateBroadcast = HandlerResponse.CreateBroadcast(PacketId.UserUpdateNotification, userUpdateGamePacket, userIds);
     return equipResponse.SetNextResponse(userUpdateBroadcast);
   }
+  #pragma warning restore CS1998
 
+  /// <summary>
+  /// 빵야 리액션(데미지) 요청 처리
+  /// </summary>
   public async Task<HandlerResponse> HandleReactionRequest(ClientSession client, uint sequence, C2SReactionRequest request)
   {
     var room = _roomManager.GetRoom(client.RoomId);
@@ -392,6 +408,10 @@ public class GamePacketHandler
     return initResponse.SetNextResponse(userUpdateBroadcast);
   }
 
+  /// <summary>
+  /// 카드 버리기 요청 처리
+  /// </summary>
+  #pragma warning disable CS1998
   public async Task<HandlerResponse> HandleDestroyCardRequest(ClientSession client, uint sequence, C2SDestroyCardRequest request)
   {
     var room = _roomManager.GetRoom(client.RoomId);
@@ -451,7 +471,11 @@ public class GamePacketHandler
 
     return HandlerResponse.CreateResponse(PacketId.DestroyCardResponse, sequence, responseGamePacket).SetNextResponse(userUpdateBroadcast);
   }
+  #pragma warning restore CS1998
 
+  /// <summary>
+  /// 로비로 돌아가기 요청 처리
+  /// </summary>
   public async Task<HandlerResponse> HandleComeBackLobbyRequest(ClientSession client, uint sequence, C2SComeBackLobbyRequest request)
   {
     var room = _roomManager.GetRoom(client.RoomId);

@@ -84,7 +84,7 @@ public class TcpClientConnection : IClientConnection
           break;
         }
 
-        messageBuffer.AddRange(buffer.Take(bytesRead));
+        messageBuffer.AddRange(new ArraySegment<byte>(buffer, 0, bytesRead));
         OnDataReceived?.Invoke(messageBuffer.ToArray());
         messageBuffer.Clear();
       }
