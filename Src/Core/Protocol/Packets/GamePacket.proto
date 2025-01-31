@@ -6,51 +6,51 @@ import "Game.proto";
 
 message GamePacket {
   oneof payload {
-    C2SGameServerInitRequest GameServerInitRequest = 28;
-    S2CGameServerInitResponse GameServerInitResponse = 29;
-    S2CGameServerInitNotification GameServerInitNotification = 30;
-    C2SPositionUpdateRequest PositionUpdateRequest = 31;
-    S2CPositionUpdateNotification PositionUpdateNotification = 32;
-    C2SUseCardRequest UseCardRequest = 33;
-    S2CUseCardResponse UseCardResponse = 34;
-    S2CUseCardNotification UseCardNotification = 35;
-    S2CEquipCardNotification EquipCardNotification = 36;
-    S2CCardEffectNotification CardEffectNotification = 37;
-    S2CFleaMarketNotification FleaMarketNotification = 38;
-    S2CUserUpdateNotification UserUpdateNotification = 41;
-    S2CPhaseUpdateNotification PhaseUpdateNotification = 42;
-    C2SReactionRequest ReactionRequest = 43;
-    S2CReactionResponse ReactionResponse = 44;
-    C2SDestroyCardRequest DestroyCardRequest = 45;
-    S2CDestroyCardResponse DestroyCardResponse = 46;
-    S2CGameEndNotification GameEndNotification = 47;
-    C2SComeBackLobbyRequest ComeBackLobbyRequest = 60;
-    S2CComeBackLobbyResponse ComeBackLobbyResponse = 61;
+    C2SGameServerInitRequest GameServerInitRequest = 100;
+    S2CGameServerInitResponse GameServerInitResponse = 101;
+    S2CGameServerInitNotification GameServerInitNotification = 102;
+    C2SPositionUpdateRequest PositionUpdateRequest = 103;
+    S2CPositionUpdateNotification PositionUpdateNotification = 104;
+    C2SUseCardRequest UseCardRequest = 105;
+    S2CUseCardResponse UseCardResponse = 106;
+    S2CUseCardNotification UseCardNotification = 107;
+    S2CEquipCardNotification EquipCardNotification = 108;
+    S2CCardEffectNotification CardEffectNotification = 109;
+    S2CFleaMarketNotification FleaMarketNotification = 110;
+    S2CUserUpdateNotification UserUpdateNotification = 113;
+    S2CPhaseUpdateNotification PhaseUpdateNotification = 114;
+    C2SReactionRequest ReactionRequest = 115;
+    S2CReactionResponse ReactionResponse = 116;
+    C2SDestroyCardRequest DestroyCardRequest = 117;
+    S2CDestroyCardResponse DestroyCardResponse = 118;
+    S2CGameEndNotification GameEndNotification = 119;
+    C2SComeBackLobbyRequest ComeBackLobbyRequest = 198;
+    S2CComeBackLobbyResponse ComeBackLobbyResponse = 199;
   }
 }
 
 enum PacketId {
   Unknown = 0;
 
-  // Game packets (28~)
-  GameServerInitRequest = 28;
-  GameServerInitResponse = 29;
-  GameServerInitNotification = 30;
-  PositionUpdateRequest = 31;
-  PositionUpdateNotification = 32;
-  UseCardRequest = 33;
-  UseCardResponse = 34;
-  UseCardNotification = 35;
-  EquipCardNotification = 36;
-  CardEffectNotification = 37;
-  FleaMarketNotification = 38;
-  UserUpdateNotification = 41;
-  PhaseUpdateNotification = 42;
-  ReactionRequest = 43;
-  ReactionResponse = 44;
-  DestroyCardRequest = 45;
-  DestroyCardResponse = 46;
-  GameEndNotification = 47;
-  ComeBackLobbyRequest = 60;
-  ComeBackLobbyResponse = 61;
+  // Game packets (100~)
+  GameServerInitRequest = 100;
+  GameServerInitResponse = 101;
+  GameServerInitNotification = 102;
+  PositionUpdateRequest = 103;
+  PositionUpdateNotification = 104;
+  UseCardRequest = 105;
+  UseCardResponse = 106;
+  UseCardNotification = 107;
+  EquipCardNotification = 108;
+  CardEffectNotification = 109;
+  FleaMarketNotification = 110;
+  UserUpdateNotification = 113;
+  PhaseUpdateNotification = 114;
+  ReactionRequest = 115;
+  ReactionResponse = 116;
+  DestroyCardRequest = 117;
+  DestroyCardResponse = 118;
+  GameEndNotification = 119;
+  ComeBackLobbyRequest = 198;
+  ComeBackLobbyResponse = 199;
 }
