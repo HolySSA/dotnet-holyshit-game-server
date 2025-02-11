@@ -1,7 +1,7 @@
 # Holy Shit
 
 <p align="center">
-  <img src="./holyshit-server/Assets/holyshit-logo.png" alt="Holyshit Logo" width="400"/>
+  <img src="./Assets/holyshit-logo.png" alt="Holyshit Logo" width="400"/>
 </p>
 
 ## 프로젝트 소개
@@ -14,7 +14,7 @@
 ## 서비스 아키텍처
 
 <p align="center">
-  <img src="./holyshit-server/Assets/service-architecture.png" alt="Service Architecture" width="400"/>
+  <img src="./Assets/service-architecture.png" alt="Service Architecture" width="400"/>
 </p>
 
 ## 기술 구현
